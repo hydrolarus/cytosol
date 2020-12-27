@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 cytosol-syntax = { path = "../cytosol-syntax" }
+logos = "0.11"
