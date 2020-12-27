@@ -30,8 +30,12 @@ pub enum Token<'src> {
     #[token("→")]
     ArrowR,
 
+    #[token(",")]
+    Comma,
     #[token(":")]
     Colon,
+    #[token(";")]
+    SemiColon,
 
     #[token("(")]
     ParenOpen,
@@ -42,6 +46,16 @@ pub enum Token<'src> {
     BraceOpen,
     #[token("}")]
     BraceClose,
+
+    #[token("[")]
+    BracketOpen,
+    #[token("]")]
+    BracketClose,
+
+    #[token("-")]
+    OpMinus,
+    #[token("+")]
+    OpPlus,
 
     Comment,
 

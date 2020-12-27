@@ -1,0 +1,27 @@
+gene [Start, 0 StartInhibitor]
+{
+    express StartInhibitor;
+    call print_line("hello, world.");
+}
+
+// args: --dump-tokens
+
+// expected stdout:
+// Gene
+// BracketOpen
+// Identifier("Start")
+// Comma
+// IntegerLiteral(0)
+// Identifier("StartInhibitor")
+// BracketClose
+// BraceOpen
+// Express
+// Identifier("StartInhibitor")
+// SemiColon
+// Call
+// Identifier("print_line")
+// ParenOpen
+// StringLiteral("hello, world.")
+// ParenClose
+// SemiColon
+// BraceClose
