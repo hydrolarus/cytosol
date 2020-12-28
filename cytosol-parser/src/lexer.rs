@@ -1,5 +1,4 @@
-use codespan::FileId;
-use cytosol_syntax::FC;
+use cytosol_syntax::{FileId, FC};
 use logos::Logos;
 
 pub struct Token<'src> {
@@ -23,6 +22,11 @@ pub enum TokenKind<'src> {
 
     #[token("extern")]
     Extern,
+
+    #[token("Ø")]
+    #[token("ø")]
+    #[token("nothing")]
+    Nothing,
 
     #[regex(r"(\p{XID_Start}|_)(\p{XID_Continue}|')*")]
     Identifier(&'src str),
@@ -63,8 +67,6 @@ pub enum TokenKind<'src> {
     OpMinus,
     #[token("+")]
     OpPlus,
-
-    Comment,
 
     #[error]
     // skip whitespace
@@ -143,6 +145,8 @@ fn parse_string_literal<'src>(lex: &mut logos::Lexer<'src, TokenKind<'src>>) -> 
 mod tests {
     use super::*;
 
+    use codespan_reporting::files::SimpleFiles;
+
     #[test]
     fn string_literal() {
         let input = r#"
@@ -151,7 +155,7 @@ mod tests {
             "\r\n\nHello"
         "#;
 
-        let mut files = codespan::Files::new();
+        let mut files = SimpleFiles::new();
         let id = files.add("<test>", input);
 
         let toks = tokenise(id, input).collect::<Vec<_>>();
@@ -176,7 +180,7 @@ mod tests {
         10_000_000
         "#;
 
-        let mut files = codespan::Files::new();
+        let mut files = SimpleFiles::new();
         let id = files.add("<test>", input);
 
         let toks = tokenise(id, input).collect::<Vec<_>>();
@@ -191,7 +195,7 @@ mod tests {
     fn identifiers() {
         let input = "A53α";
 
-        let mut files = codespan::Files::new();
+        let mut files = SimpleFiles::new();
         let id = files.add("<test>", input);
 
         let toks = tokenise(id, input).collect::<Vec<_>>();

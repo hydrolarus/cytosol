@@ -1,4 +1,4 @@
-use std::borrow::Borrow;
+use std::{borrow::Borrow, ops::Range};
 
 use crate::types::{
     AtomBinding, Enzyme, Expression, Gene, GeneStatement, Identifier, Literal, Product, Quantified,
@@ -16,6 +16,10 @@ impl FC {
             start: self.start.min(other.start),
             end: self.end.max(other.end),
         }
+    }
+
+    pub fn range(&self) -> Range<usize> {
+        self.start..self.end
     }
 }
 

@@ -9,5 +9,7 @@ edition = "2018"
 [dependencies]
 cytosol-syntax = { path = "../cytosol-syntax" }
 logos = "0.11"
-codespan = "0.11"
 thiserror = "1"
+
+[dev-dependencies]
+codespan-reporting = "0.11"

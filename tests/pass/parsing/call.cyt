@@ -1,0 +1,17 @@
+extern print_line(s: string)
+
+gene [Start]
+{
+    call print_line(s: "Hello!")
+}
+
+// args: --dump-ast
+
+// expected stdout:
+// (file
+//     (
+//         (gene
+//             ((atom Start))
+//             ((call print_line ((s "Hello!"))))))
+//     ()
+//     ((extern print_line ((s string)))))

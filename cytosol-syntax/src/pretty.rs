@@ -71,13 +71,20 @@ impl ToDoc for Extern {
 impl ToDoc for AtomBinding {
     fn to_doc(&self) -> Doc {
         if self.fields.is_empty() {
-            self.name.to_doc()
-        } else {
-            Doc::text("(")
+            Doc::text("(atom ")
                 .append(self.name.to_doc())
-                .append(Doc::space())
-                .append(self.fields.to_doc())
                 .append(Doc::text(")"))
+                .group()
+        } else {
+            Doc::text("(atom")
+                .append(
+                    Doc::line()
+                        .append(self.name.to_doc())
+                        .append(Doc::space())
+                        .append(self.fields.to_doc())
+                        .append(Doc::text(")"))
+                        .nest(4),
+                )
                 .group()
         }
     }
@@ -121,22 +128,82 @@ impl<T: ToDoc> ToDoc for Quantified<T> {
 }
 impl ToDoc for Enzyme {
     fn to_doc(&self) -> Doc {
-        todo!()
+        Doc::text("(enzyme")
+            .append(
+                Doc::line()
+                    .append(self.name.to_doc())
+                    .append(Doc::line())
+                    .append(self.reactants.to_doc())
+                    .append(Doc::line())
+                    .append(self.products.to_doc())
+                    .nest(4)
+                    .group(),
+            )
+            .append(Doc::text(")"))
+            .group()
     }
 }
 impl ToDoc for Product {
     fn to_doc(&self) -> Doc {
-        todo!()
+        if self.fields.is_empty() {
+            Doc::text("(product")
+                .append(Doc::line())
+                .append(self.name.to_doc())
+                .append(")")
+                .group()
+        } else {
+            Doc::text("(product")
+                .append(Doc::line())
+                .append(self.name.to_doc())
+                .append(Doc::line())
+                .append(self.fields.to_doc())
+                .append(")")
+                .group()
+        }
     }
 }
 impl ToDoc for GeneStatement {
     fn to_doc(&self) -> Doc {
-        todo!()
+        match self {
+            GeneStatement::Call {
+                fc: _,
+                name,
+                arguments,
+            } => Doc::text("(call")
+                .append(Doc::line())
+                .append(name.to_doc())
+                .append(Doc::line())
+                .append(arguments.to_doc())
+                .append(")")
+                .group(),
+            GeneStatement::Express(_, prod) => Doc::text("(express")
+                .append(Doc::line())
+                .append(prod.to_doc())
+                .append(")")
+                .group(),
+        }
     }
 }
 impl ToDoc for Expression {
     fn to_doc(&self) -> Doc {
-        todo!()
+        match self {
+            Expression::Literal(l) => l.to_doc(),
+            Expression::Variable(v) => v.to_doc(),
+            Expression::PrefixOp { op: (_, op), expr } => Doc::text("(")
+                .append(op.to_doc())
+                .append(Doc::line())
+                .append(expr.to_doc())
+                .append(")")
+                .group(),
+            Expression::InfixOp { op: (_, op), args } => Doc::text("(")
+                .append(op.to_doc())
+                .append(Doc::line())
+                .append(args[0].to_doc())
+                .append(Doc::line())
+                .append(args[1].to_doc())
+                .append(")")
+                .group(),
+        }
     }
 }
 impl ToDoc for Literal {
@@ -174,5 +241,21 @@ impl ToDoc for (Identifier, Type) {
                     .group(),
             )
             .append(")")
+            .group()
+    }
+}
+
+impl ToDoc for (Identifier, Expression) {
+    fn to_doc(&self) -> Doc {
+        Doc::text("(")
+            .append(
+                self.0
+                    .to_doc()
+                    .append(Doc::space())
+                    .append(self.1.to_doc())
+                    .group(),
+            )
+            .append(")")
+            .group()
     }
 }

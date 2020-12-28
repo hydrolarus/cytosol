@@ -1,4 +1,4 @@
-use codespan::FileId;
+pub type FileId = usize;
 
 #[derive(Debug, Clone)]
 pub struct FC {

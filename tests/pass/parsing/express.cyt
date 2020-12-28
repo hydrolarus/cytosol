@@ -1,0 +1,20 @@
+gene []
+{
+    express A
+    express B(x: 0, y: "hello")
+    express C(n: 12 + (-1),)
+}
+
+// args: --dump-ast
+
+// expected stdout:
+// (file
+//     (
+//         (gene
+//             ()
+//             (
+//                 (express (product A))
+//                 (express (product B ((x 0) (y "hello"))))
+//                 (express (product C ((n (+ 12 (- 1)))))))))
+//     ()
+//     ())

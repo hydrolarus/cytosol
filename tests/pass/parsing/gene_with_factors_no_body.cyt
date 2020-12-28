@@ -13,13 +13,13 @@ gene [1 A, 12 C,] // trailing comma
 // (file
 //     (
 //         (gene
-//             (Start (0 StartInhibitor))
+//             ((atom Start) (0 (atom StartInhibitor)))
 //             ())
 //         (gene
 //             ()
 //             ())
 //         (gene
-//             ((1 A) (12 C))
+//             ((1 (atom A)) (12 (atom C)))
 //             ()))
 //     ()
 //     ())

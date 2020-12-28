@@ -1,0 +1,20 @@
+extern print_line(s: string)
+
+gene [Start, 0 StartInhibitor]
+{
+    express StartInhibitor
+    call print_line(s: "hello, world.")
+}
+
+// args: --dump-ast
+
+// expected stdout:
+// (file
+//     (
+//         (gene
+//             ((atom Start) (0 (atom StartInhibitor)))
+//             (
+//                 (express (product StartInhibitor))
+//                 (call print_line ((s "hello, world."))))))
+//     ()
+//     ((extern print_line ((s string)))))
