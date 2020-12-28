@@ -1,0 +1,13 @@
+extern print_line(s: string)
+
+extern print_radix(num: int, radix: int,)
+
+// args: --dump-ast
+
+// expected stdout:
+// (file
+//     ()
+//     ()
+//     (
+//         (extern print_line ((s string)))
+//         (extern print_radix ((num int) (radix int)))))

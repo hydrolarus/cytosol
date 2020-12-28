@@ -1,10 +1,14 @@
-use std::sync::Arc;
-
+use codespan::FileId;
 use cytosol_syntax::FC;
 use logos::Logos;
 
+pub struct Token<'src> {
+    pub fc: FC,
+    pub kind: TokenKind<'src>,
+}
+
 #[derive(Debug, Logos, PartialEq, Eq)]
-pub enum Token<'src> {
+pub enum TokenKind<'src> {
     #[token("gene")]
     Gene,
 
@@ -16,6 +20,9 @@ pub enum Token<'src> {
 
     #[token("call")]
     Call,
+
+    #[token("extern")]
+    Extern,
 
     #[regex(r"(\p{XID_Start}|_)(\p{XID_Continue}|')*")]
     Identifier(&'src str),
@@ -67,19 +74,14 @@ pub enum Token<'src> {
     Error,
 }
 
-pub fn tokenise<'src>(
-    file: Option<&str>,
-    input: &'src str,
-) -> impl Iterator<Item = (FC, Token<'src>)> {
-    let file = file.map(Arc::from);
-
-    Token::lexer(input).spanned().map(move |(tok, span)| {
+pub fn tokenise(file: FileId, input: &str) -> impl Iterator<Item = Token<'_>> {
+    TokenKind::lexer(input).spanned().map(move |(tok, span)| {
         let fc = FC {
-            file: file.clone(),
+            file,
             start: span.start,
             end: span.end,
         };
-        (fc, tok)
+        Token { kind: tok, fc }
     })
 }
 
@@ -100,7 +102,7 @@ fn parse_integer_literal(s: &str) -> Option<usize> {
     Some(acc)
 }
 
-fn parse_string_literal<'src>(lex: &mut logos::Lexer<'src, Token<'src>>) -> Option<String> {
+fn parse_string_literal<'src>(lex: &mut logos::Lexer<'src, TokenKind<'src>>) -> Option<String> {
     let s = lex.remainder();
 
     let mut buf = String::new();
@@ -149,14 +151,20 @@ mod tests {
             "\r\n\nHello"
         "#;
 
-        let toks = tokenise(None, input).collect::<Vec<_>>();
+        let mut files = codespan::Files::new();
+        let id = files.add("<test>", input);
+
+        let toks = tokenise(id, input).collect::<Vec<_>>();
         assert_eq!(toks.len(), 3);
         assert_eq!(
-            toks[0].1,
-            Token::StringLiteral("hello world!\n".to_string())
+            toks[0].kind,
+            TokenKind::StringLiteral("hello world!\n".to_string())
         );
-        assert_eq!(toks[1].1, Token::StringLiteral("".to_string()));
-        assert_eq!(toks[2].1, Token::StringLiteral("\r\n\nHello".to_string()));
+        assert_eq!(toks[1].kind, TokenKind::StringLiteral("".to_string()));
+        assert_eq!(
+            toks[2].kind,
+            TokenKind::StringLiteral("\r\n\nHello".to_string())
+        );
     }
 
     #[test]
@@ -168,19 +176,26 @@ mod tests {
         10_000_000
         "#;
 
-        let toks = tokenise(None, input).collect::<Vec<_>>();
+        let mut files = codespan::Files::new();
+        let id = files.add("<test>", input);
+
+        let toks = tokenise(id, input).collect::<Vec<_>>();
         assert_eq!(toks.len(), 4);
-        assert_eq!(toks[0].1, Token::IntegerLiteral(12));
-        assert_eq!(toks[1].1, Token::IntegerLiteral(0));
-        assert_eq!(toks[2].1, Token::IntegerLiteral(493));
-        assert_eq!(toks[3].1, Token::IntegerLiteral(10_000_000));
+        assert_eq!(toks[0].kind, TokenKind::IntegerLiteral(12));
+        assert_eq!(toks[1].kind, TokenKind::IntegerLiteral(0));
+        assert_eq!(toks[2].kind, TokenKind::IntegerLiteral(493));
+        assert_eq!(toks[3].kind, TokenKind::IntegerLiteral(10_000_000));
     }
 
     #[test]
     fn identifiers() {
         let input = "A53α";
-        let toks = tokenise(None, input).collect::<Vec<_>>();
+
+        let mut files = codespan::Files::new();
+        let id = files.add("<test>", input);
+
+        let toks = tokenise(id, input).collect::<Vec<_>>();
         assert_eq!(toks.len(), 1);
-        assert_eq!(toks[0].1, Token::Identifier("A53α"));
+        assert_eq!(toks[0].kind, TokenKind::Identifier("A53α"));
     }
 }

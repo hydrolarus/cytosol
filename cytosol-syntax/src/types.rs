@@ -1,15 +1,29 @@
-use std::sync::Arc;
+use codespan::FileId;
 
 #[derive(Debug, Clone)]
 pub struct FC {
-    pub file: Option<Arc<str>>,
+    pub file: FileId,
     // as byte offsets in file
     pub start: usize,
     pub end: usize,
 }
 
+#[derive(Debug, Default, Clone)]
+pub struct File {
+    pub genes: Vec<Gene>,
+    pub enzymes: Vec<Enzyme>,
+    pub externs: Vec<Extern>,
+}
+
 #[derive(Debug, Clone)]
 pub struct Identifier(pub FC, pub String);
+
+#[derive(Debug, Clone)]
+pub struct Extern {
+    pub fc: FC,
+    pub name: Identifier,
+    pub parameters: Vec<(Identifier, Type)>,
+}
 
 #[derive(Debug, Clone)]
 pub struct AtomBinding {

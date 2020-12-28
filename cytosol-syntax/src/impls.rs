@@ -8,8 +8,11 @@ use crate::types::{
 impl FC {
     pub fn merge(&self, other: impl Borrow<FC>) -> FC {
         let other = other.borrow();
+
+        debug_assert_eq!(self.file, other.file);
+
         FC {
-            file: self.file.as_ref().or_else(|| other.file.as_ref()).cloned(),
+            file: self.file,
             start: self.start.min(other.start),
             end: self.end.max(other.end),
         }

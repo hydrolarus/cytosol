@@ -1,12 +1,21 @@
+extern print_line(s: string)
+
 gene [Start, 0 StartInhibitor]
 {
-    express StartInhibitor;
-    call print_line("hello, world.");
+    express StartInhibitor
+    call print_line(s: "hello, world.")
 }
 
 // args: --dump-tokens
 
 // expected stdout:
+// Extern
+// Identifier("print_line")
+// ParenOpen
+// Identifier("s")
+// Colon
+// Identifier("string")
+// ParenClose
 // Gene
 // BracketOpen
 // Identifier("Start")
@@ -17,11 +26,11 @@ gene [Start, 0 StartInhibitor]
 // BraceOpen
 // Express
 // Identifier("StartInhibitor")
-// SemiColon
 // Call
 // Identifier("print_line")
 // ParenOpen
+// Identifier("s")
+// Colon
 // StringLiteral("hello, world.")
 // ParenClose
-// SemiColon
 // BraceClose
