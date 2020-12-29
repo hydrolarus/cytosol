@@ -143,15 +143,23 @@ impl ToDoc for Enzyme {
 }
 impl ToDoc for Product {
     fn to_doc(&self) -> Doc {
+        let quantity = if let Some((_, n)) = &self.quantity {
+            Doc::as_string(*n).append(Doc::line())
+        } else {
+            Doc::nil()
+        };
+
         if self.fields.is_empty() {
             Doc::text("(product")
                 .append(Doc::line())
+                .append(quantity)
                 .append(self.name.to_doc())
                 .append(")")
                 .group()
         } else {
             Doc::text("(product")
                 .append(Doc::line())
+                .append(quantity)
                 .append(self.name.to_doc())
                 .append(Doc::line())
                 .append(self.fields.to_doc())

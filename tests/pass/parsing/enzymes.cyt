@@ -17,6 +17,6 @@ enzyme VariableBind[a: A, 0 B, c: C] -> nothing
 //         (enzyme Test ((atom A) (atom B)) ((product C)))
 //         (enzyme Thing ((atom C)) ())
 //         (enzyme Thing2 ((atom C)) ())
-//         (enzyme Quantifiers ((atom 1 A) (atom 2 C)) ((10 (product D))))
+//         (enzyme Quantifiers ((atom 1 A) (atom 2 C)) ((product 10 D)))
 //         (enzyme VariableBind ((atom a A) (atom 0 B) (atom c C)) ()))
 //     ())
