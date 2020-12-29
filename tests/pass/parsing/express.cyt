@@ -9,6 +9,7 @@ gene []
 
 // expected stdout:
 // (file
+//     ()
 //     (
 //         (gene
 //             ()

@@ -4,22 +4,23 @@ gene [Start, 0 StartInhibitor ]
 gene []
 {}
 
-gene [1 A, 12 C,] // trailing comma
+gene [1 A, 12 C, n: B] // trailing comma
 {}
 
 // args: --dump-ast
 
 // expected stdout:
 // (file
+//     ()
 //     (
 //         (gene
-//             ((atom Start) (0 (atom StartInhibitor)))
+//             ((atom Start) (atom 0 StartInhibitor))
 //             ())
 //         (gene
 //             ()
 //             ())
 //         (gene
-//             ((1 (atom A)) (12 (atom C)))
+//             ((atom 1 A) (atom 12 C) (atom n B))
 //             ()))
 //     ()
 //     ())

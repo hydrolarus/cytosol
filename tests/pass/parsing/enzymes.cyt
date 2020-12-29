@@ -1,24 +1,22 @@
-enzyme Test: A + B -> C
+enzyme Test[A, B] -> C
 
-enzyme Thing: C -> nothing
-enzyme Thing2: C -> Ø
+enzyme Thing[C] -> nothing
+enzyme Thing2[C] -> Ø
 
-enzyme Quantifiers: 1 A + 2 C -> 10 D
+enzyme Quantifiers[1 A, 2 C] -> 10 D
 
-enzyme Adder: Add(a: int, b: int) -> Sum(value: a + b)
+enzyme VariableBind[a: A, 0 B, c: C] -> nothing
 
 // args: --dump-ast
 
 // expected stdout:
 // (file
 //     ()
+//     ()
 //     (
 //         (enzyme Test ((atom A) (atom B)) ((product C)))
 //         (enzyme Thing ((atom C)) ())
 //         (enzyme Thing2 ((atom C)) ())
-//         (enzyme Quantifiers ((1 (atom A)) (2 (atom C))) ((10 (product D))))
-//         (enzyme
-//             Adder
-//             ((atom Add ((a int) (b int))))
-//             ((product Sum ((value (+ a b)))))))
+//         (enzyme Quantifiers ((atom 1 A) (atom 2 C)) ((10 (product D))))
+//         (enzyme VariableBind ((atom a A) (atom 0 B) (atom c C)) ()))
 //     ())

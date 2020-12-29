@@ -1,8 +1,11 @@
 use std::{borrow::Borrow, ops::Range};
 
-use crate::types::{
-    AtomBinding, Enzyme, Expression, Gene, GeneStatement, Identifier, Literal, Product, Quantified,
-    Type, FC,
+use crate::{
+    types::{
+        AtomBinding, Enzyme, Expression, Gene, GeneStatement, Identifier, Literal, Product,
+        Quantified, Type, FC,
+    },
+    Atom,
 };
 
 impl FC {
@@ -29,25 +32,33 @@ pub trait HasFC {
 
 impl HasFC for Identifier {
     fn fc(&self) -> FC {
-        self.0.clone()
+        self.0
     }
 }
+
+impl HasFC for Atom {
+    fn fc(&self) -> FC {
+        self.fc
+    }
+}
+
 impl HasFC for AtomBinding {
     fn fc(&self) -> FC {
-        self.fc.clone()
+        self.fc
     }
 }
+
 impl HasFC for Type {
     fn fc(&self) -> FC {
         match self {
-            Type::Int(fc) => fc.clone(),
-            Type::String(fc) => fc.clone(),
+            Type::Named(n) => n.fc(),
         }
     }
 }
+
 impl HasFC for Gene {
     fn fc(&self) -> FC {
-        self.fc.clone()
+        self.fc
     }
 }
 impl<T: HasFC> HasFC for Quantified<T> {
@@ -61,19 +72,19 @@ impl<T: HasFC> HasFC for Quantified<T> {
 }
 impl HasFC for Enzyme {
     fn fc(&self) -> FC {
-        self.fc.clone()
+        self.fc
     }
 }
 impl HasFC for Product {
     fn fc(&self) -> FC {
-        self.fc.clone()
+        self.fc
     }
 }
 impl HasFC for GeneStatement {
     fn fc(&self) -> FC {
         match self {
-            GeneStatement::Call { fc, .. } => fc.clone(),
-            GeneStatement::Express(fc, _) => fc.clone(),
+            GeneStatement::Call { fc, .. } => *fc,
+            GeneStatement::Express(fc, _) => *fc,
         }
     }
 }
@@ -82,6 +93,7 @@ impl HasFC for Expression {
         match self {
             Expression::Literal(l) => l.fc(),
             Expression::Variable(id) => id.fc(),
+            Expression::FieldAccess { base, field_name } => base.fc().merge(field_name.fc()),
             Expression::PrefixOp { op, expr } => op.0.merge(expr.fc()),
             Expression::InfixOp { op: _, args } => args[0].fc().merge(args[1].fc()),
         }
@@ -90,8 +102,8 @@ impl HasFC for Expression {
 impl HasFC for Literal {
     fn fc(&self) -> FC {
         match self {
-            Literal::Integer(fc, _) => fc.clone(),
-            Literal::String(fc, _) => fc.clone(),
+            Literal::Integer(fc, _) => *fc,
+            Literal::String(fc, _) => *fc,
         }
     }
 }

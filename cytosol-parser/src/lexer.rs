@@ -8,6 +8,9 @@ pub struct Token<'src> {
 
 #[derive(Debug, Logos, PartialEq, Eq)]
 pub enum TokenKind<'src> {
+    #[token("atom")]
+    Atom,
+
     #[token("gene")]
     Gene,
 
@@ -41,6 +44,8 @@ pub enum TokenKind<'src> {
     #[token("→")]
     ArrowR,
 
+    #[token(".")]
+    Dot,
     #[token(",")]
     Comma,
     #[token(":")]

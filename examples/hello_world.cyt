@@ -1,5 +1,7 @@
 extern print_line(msg: string)
 
+atom StartInhibitor
+
 gene [Start, 0 StartInhibitor]
 {
     call print_line(msg: "hello world")

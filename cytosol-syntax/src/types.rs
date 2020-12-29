@@ -1,6 +1,6 @@
 pub type FileId = usize;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct FC {
     pub file: FileId,
     // as byte offsets in file
@@ -10,6 +10,7 @@ pub struct FC {
 
 #[derive(Debug, Default, Clone)]
 pub struct File {
+    pub atoms: Vec<Atom>,
     pub genes: Vec<Gene>,
     pub enzymes: Vec<Enzyme>,
     pub externs: Vec<Extern>,
@@ -19,6 +20,13 @@ pub struct File {
 pub struct Identifier(pub FC, pub String);
 
 #[derive(Debug, Clone)]
+pub struct Atom {
+    pub fc: FC,
+    pub name: Identifier,
+    pub fields: Vec<(Identifier, Type)>,
+}
+
+#[derive(Debug, Clone)]
 pub struct Extern {
     pub fc: FC,
     pub name: Identifier,
@@ -26,22 +34,27 @@ pub struct Extern {
 }
 
 #[derive(Debug, Clone)]
+pub enum AtomBindingAttribute {
+    Quantity(FC, usize),
+    Name(Identifier),
+}
+
+#[derive(Debug, Clone)]
 pub struct AtomBinding {
     pub fc: FC,
+    pub attr: Option<AtomBindingAttribute>,
     pub name: Identifier,
-    pub fields: Vec<(Identifier, Type)>,
 }
 
 #[derive(Debug, Clone)]
 pub enum Type {
-    Int(FC),
-    String(FC),
+    Named(Identifier),
 }
 
 #[derive(Debug, Clone)]
 pub struct Gene {
     pub fc: FC,
-    pub factors: Vec<Quantified<AtomBinding>>,
+    pub factors: Vec<AtomBinding>,
     pub body: Vec<GeneStatement>,
 }
 
@@ -55,7 +68,7 @@ pub struct Quantified<T> {
 pub struct Enzyme {
     pub fc: FC,
     pub name: Identifier,
-    pub reactants: Vec<Quantified<AtomBinding>>,
+    pub reactants: Vec<AtomBinding>,
     pub products: Vec<Quantified<Product>>,
 }
 
@@ -81,6 +94,10 @@ pub enum GeneStatement {
 pub enum Expression {
     Literal(Literal),
     Variable(Identifier),
+    FieldAccess {
+        base: Box<Expression>,
+        field_name: Identifier,
+    },
     PrefixOp {
         op: (FC, PrefixOperator),
         expr: Box<Expression>,

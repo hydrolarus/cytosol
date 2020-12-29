@@ -10,9 +10,10 @@ gene [Start, 0 StartInhibitor]
 
 // expected stdout:
 // (file
+//     ()
 //     (
 //         (gene
-//             ((atom Start) (0 (atom StartInhibitor)))
+//             ((atom Start) (atom 0 StartInhibitor))
 //             (
 //                 (express (product StartInhibitor))
 //                 (call print_line ((s "hello, world."))))))

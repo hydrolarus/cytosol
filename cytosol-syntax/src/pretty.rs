@@ -1,8 +1,8 @@
 use pretty::RcDoc as Doc;
 
 use crate::{
-    AtomBinding, Enzyme, Expression, Extern, File, Gene, GeneStatement, Identifier, InfixOperator,
-    Literal, PrefixOperator, Product, Quantified, Type,
+    Atom, AtomBinding, AtomBindingAttribute, Enzyme, Expression, Extern, File, Gene, GeneStatement,
+    Identifier, InfixOperator, Literal, PrefixOperator, Product, Quantified, Type,
 };
 
 pub fn pretty_print<T: ToDoc>(val: &T, width: usize) -> String {
@@ -38,6 +38,8 @@ impl ToDoc for File {
         Doc::text("(file")
             .append(
                 Doc::line()
+                    .append(self.atoms.to_doc())
+                    .append(Doc::hardline())
                     .append(self.genes.to_doc())
                     .append(Doc::hardline())
                     .append(self.enzymes.to_doc().group())
@@ -68,32 +70,41 @@ impl ToDoc for Extern {
             .append(Doc::text(")"))
     }
 }
+
+impl ToDoc for Atom {
+    fn to_doc(&self) -> Doc {
+        Doc::text("(atom")
+            .append(
+                Doc::line()
+                    .append(self.name.to_doc())
+                    .append(Doc::space())
+                    .append(self.fields.to_doc())
+                    .nest(4)
+                    .group(),
+            )
+            .append(Doc::text(")"))
+    }
+}
+
 impl ToDoc for AtomBinding {
     fn to_doc(&self) -> Doc {
-        if self.fields.is_empty() {
-            Doc::text("(atom ")
-                .append(self.name.to_doc())
-                .append(Doc::text(")"))
-                .group()
-        } else {
-            Doc::text("(atom")
-                .append(
-                    Doc::line()
-                        .append(self.name.to_doc())
-                        .append(Doc::space())
-                        .append(self.fields.to_doc())
-                        .append(Doc::text(")"))
-                        .nest(4),
-                )
-                .group()
-        }
+        let attr = match &self.attr {
+            Some(AtomBindingAttribute::Name(n)) => n.to_doc().append(Doc::space()),
+            Some(AtomBindingAttribute::Quantity(_, n)) => Doc::as_string(n).append(Doc::space()),
+            None => Doc::nil(),
+        };
+
+        Doc::text("(atom ")
+            .append(attr)
+            .append(self.name.to_doc())
+            .append(Doc::text(")"))
+            .group()
     }
 }
 impl ToDoc for Type {
     fn to_doc(&self) -> Doc {
         match self {
-            Type::Int(_) => Doc::text("int"),
-            Type::String(_) => Doc::text("string"),
+            Type::Named(n) => n.to_doc(),
         }
     }
 }
@@ -189,6 +200,12 @@ impl ToDoc for Expression {
         match self {
             Expression::Literal(l) => l.to_doc(),
             Expression::Variable(v) => v.to_doc(),
+            Expression::FieldAccess { base, field_name } => Doc::text("(.")
+                .append(field_name.to_doc())
+                .append(Doc::line())
+                .append(base.to_doc())
+                .append(")")
+                .group(),
             Expression::PrefixOp { op: (_, op), expr } => Doc::text("(")
                 .append(op.to_doc())
                 .append(Doc::line())

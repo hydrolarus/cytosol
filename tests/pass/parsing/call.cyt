@@ -9,6 +9,7 @@ gene [Start]
 
 // expected stdout:
 // (file
+//     ()
 //     (
 //         (gene
 //             ((atom Start))
