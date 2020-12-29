@@ -21,7 +21,7 @@ pub(crate) fn report_any_lexing_errors<'a>(
             let label = Label::primary(tok.fc.file, tok.fc.range());
             let diag = Diagnostic::error()
                 .with_code("lexer-error")
-                .with_message(format!("Unknown token `{}`", source))
+                .with_message(format!("Invalid token `{}`", source))
                 .with_labels(vec![label]);
 
             let mut writer = StandardStream::stderr(ColorChoice::Auto);
@@ -43,21 +43,24 @@ pub(crate) fn report_parse_error<'a>(files: &'a impl Files<'a, FileId = usize>, 
             let file_source = files.source(fc.file).expect("Invalid file ID");
             let source = &file_source.as_ref()[fc.start..fc.end];
 
-            let message = if let Some(exp) = desc.expected {
-                format!("expected {} but found `{}`", exp, source)
+            let (diag_message, label_message) = if let Some(exp) = desc.expected {
+                (
+                    format!("expected {}, found `{}`", exp, source),
+                    format!("expected {}", exp),
+                )
             } else {
-                format!("unexpected token `{}`", source)
+                (
+                    format!("unexpected token `{}`", source),
+                    "unexpected token".to_string(),
+                )
             };
 
-            let label = Label::primary(fc.file, fc.range()).with_message("Unexpected token");
+            let label = Label::primary(fc.file, fc.range()).with_message(label_message);
             let diag = Diagnostic::error()
                 .with_code("parse-error")
-                .with_message(message)
+                .with_message(diag_message)
                 .with_labels(vec![label])
-                .with_notes(vec![format!(
-                    "unexpected token while parsing {}",
-                    desc.while_parsing
-                )]);
+                .with_notes(vec![format!("error while parsing {}", desc.while_parsing)]);
             let mut writer = StandardStream::stderr(ColorChoice::Auto);
             let mut config = Config::default();
             config.start_context_lines = 4;
@@ -66,23 +69,26 @@ pub(crate) fn report_parse_error<'a>(files: &'a impl Files<'a, FileId = usize>, 
             codespan_reporting::term::emit(&mut writer, &config, files, &diag).unwrap();
         }
         ParseError::UnexpectedEnd(file, desc) => {
-            let message = if let Some(exp) = desc.expected {
-                format!("expected {} but reached end of file", exp)
+            let (diag_message, label_message) = if let Some(exp) = desc.expected {
+                (
+                    format!("expected {}, found end of file", exp),
+                    format!("expected {}", exp),
+                )
             } else {
-                "unexpected end of file".to_string()
+                (
+                    "unexpected end of file".to_string(),
+                    "unexpected end of file".to_string(),
+                )
             };
 
             let len = files.source(file).expect("Invalid file ID").as_ref().len();
 
-            let label = Label::primary(file, len..len);
+            let label = Label::primary(file, len..len).with_message(label_message);
             let diag = Diagnostic::error()
                 .with_code("parse-error")
-                .with_message(message)
+                .with_message(diag_message)
                 .with_labels(vec![label])
-                .with_notes(vec![format!(
-                    "unexpected end of file while parsing {}",
-                    desc.while_parsing
-                )]);
+                .with_notes(vec![format!("error while parsing {}", desc.while_parsing)]);
             let mut writer = StandardStream::stderr(ColorChoice::Auto);
             let mut config = Config::default();
             config.start_context_lines = 4;
