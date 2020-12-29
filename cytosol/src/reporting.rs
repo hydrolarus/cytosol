@@ -56,7 +56,7 @@ pub(crate) fn report_parse_error<'a>(files: &'a impl Files<'a, FileId = usize>, 
                 .with_labels(vec![label])
                 .with_notes(vec![format!(
                     "unexpected token while parsing {}",
-                    desc.item_context
+                    desc.while_parsing
                 )]);
             let mut writer = StandardStream::stderr(ColorChoice::Auto);
             let mut config = Config::default();
@@ -81,7 +81,7 @@ pub(crate) fn report_parse_error<'a>(files: &'a impl Files<'a, FileId = usize>, 
                 .with_labels(vec![label])
                 .with_notes(vec![format!(
                     "unexpected end of file while parsing {}",
-                    desc.item_context
+                    desc.while_parsing
                 )]);
             let mut writer = StandardStream::stderr(ColorChoice::Auto);
             let mut config = Config::default();
