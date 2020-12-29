@@ -2,8 +2,8 @@ use std::{borrow::Borrow, ops::Range};
 
 use crate::{
     types::{
-        AtomBinding, Enzyme, Expression, Gene, GeneStatement, Identifier, Literal, Product,
-        Quantified, Type, FC,
+        AtomBinding, Enzyme, Expression, Gene, GeneStatement, Identifier, Literal, Product, Type,
+        FC,
     },
     Atom,
 };
@@ -61,15 +61,7 @@ impl HasFC for Gene {
         self.fc
     }
 }
-impl<T: HasFC> HasFC for Quantified<T> {
-    fn fc(&self) -> FC {
-        if let Some((fc, _)) = &self.quantity {
-            fc.merge(self.value.fc())
-        } else {
-            self.value.fc()
-        }
-    }
-}
+
 impl HasFC for Enzyme {
     fn fc(&self) -> FC {
         self.fc

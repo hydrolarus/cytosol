@@ -2,7 +2,7 @@ use pretty::RcDoc as Doc;
 
 use crate::{
     Atom, AtomBinding, AtomBindingAttribute, Enzyme, Expression, Extern, File, Gene, GeneStatement,
-    Identifier, InfixOperator, Literal, PrefixOperator, Product, Quantified, Type,
+    Identifier, InfixOperator, Literal, PrefixOperator, Product, Type,
 };
 
 pub fn pretty_print<T: ToDoc>(val: &T, width: usize) -> String {
@@ -123,20 +123,7 @@ impl ToDoc for Gene {
             .group()
     }
 }
-impl<T: ToDoc> ToDoc for Quantified<T> {
-    fn to_doc(&self) -> Doc {
-        if let Some((_, n)) = &self.quantity {
-            Doc::text("(")
-                .append(Doc::as_string(n))
-                .append(Doc::space())
-                .append(self.value.to_doc())
-                .append(Doc::text(")"))
-                .group()
-        } else {
-            self.value.to_doc()
-        }
-    }
-}
+
 impl ToDoc for Enzyme {
     fn to_doc(&self) -> Doc {
         Doc::text("(enzyme")

@@ -59,22 +59,17 @@ pub struct Gene {
 }
 
 #[derive(Debug, Clone)]
-pub struct Quantified<T> {
-    pub quantity: Option<(FC, usize)>,
-    pub value: T,
-}
-
-#[derive(Debug, Clone)]
 pub struct Enzyme {
     pub fc: FC,
     pub name: Identifier,
     pub reactants: Vec<AtomBinding>,
-    pub products: Vec<Quantified<Product>>,
+    pub products: Vec<Product>,
 }
 
 #[derive(Debug, Clone)]
 pub struct Product {
     pub fc: FC,
+    pub quantity: Option<(FC, usize)>,
     pub name: Identifier,
     pub fields: Vec<(Identifier, Expression)>,
 }
@@ -87,7 +82,7 @@ pub enum GeneStatement {
         name: Identifier,
         arguments: Vec<(Identifier, Expression)>,
     },
-    Express(FC, Quantified<Product>),
+    Express(FC, Product),
 }
 
 #[derive(Debug, Clone)]
