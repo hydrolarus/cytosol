@@ -1,0 +1,7 @@
+extern print_line(msg: string)
+
+gene [Start, 0 StartInhibitor]
+{
+    call print_line(msg: "hello world")
+    express StartInhibitor
+}

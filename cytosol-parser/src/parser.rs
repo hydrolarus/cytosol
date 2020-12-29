@@ -1,28 +1,51 @@
+use std::borrow::Cow;
+
 use thiserror::Error;
 
 use cytosol_syntax::{
-    AtomBinding, Enzyme, Expression, Extern, File, Gene, GeneStatement, HasFC, Identifier,
+    AtomBinding, Enzyme, Expression, Extern, File, FileId, Gene, GeneStatement, HasFC, Identifier,
     InfixOperator, Literal, PrefixOperator, Product, Quantified, Type, FC,
 };
 
 use crate::{lexer::TokenKind, Token};
 
+#[derive(Debug, Clone)]
+pub struct ErrorContext {
+    pub item_context: Cow<'static, str>,
+    pub expected: Option<Cow<'static, str>>,
+}
+
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("Unexpected token at {:?}", .0)]
-    UnexpectedToken(FC),
+    UnexpectedToken(FC, ErrorContext),
     #[error("Unexpected end")]
-    UnexpectedEnd,
+    UnexpectedEnd(FileId, ErrorContext),
+}
+
+fn ctx_(s: impl Into<Cow<'static, str>>) -> ErrorContext {
+    ErrorContext {
+        item_context: s.into(),
+        expected: None,
+    }
+}
+
+fn ctx(item: impl Into<Cow<'static, str>>, expected: impl Into<Cow<'static, str>>) -> ErrorContext {
+    ErrorContext {
+        item_context: item.into(),
+        expected: Some(expected.into()),
+    }
 }
 
 type Result<T> = core::result::Result<T, Error>;
 
-pub fn parse_file<'src>(tokens: &'src [Token<'src>]) -> Result<File> {
-    let mut p = Parser { toks: tokens };
+pub fn parse_file<'src>(file: FileId, tokens: &'src [Token<'src>]) -> Result<File> {
+    let mut p = Parser { file, toks: tokens };
     p.parse_file()
 }
 
 struct Parser<'src> {
+    file: FileId,
     toks: &'src [Token<'src>],
 }
 
@@ -35,14 +58,19 @@ impl<'src> Parser<'src> {
                 TokenKind::Extern => {
                     let start_tok = self.next().unwrap();
 
-                    let name = self.parse_identifier()?;
+                    let name = self.parse_identifier("an extern item")?;
 
                     let (fc, params) = self.grouped_separated(
                         (TokenKind::ParenOpen, TokenKind::ParenClose),
+                        &ctx("the parameter list of an extern item", "`(`"),
                         TokenKind::Comma,
+                        &ctx("the parameter list of an extern item", "`,` or `)`"),
                         |s| {
-                            let ident = s.parse_identifier()?;
-                            let _ = s.expect_tok_and_fc(|t| matches!(t.kind, TokenKind::Colon))?;
+                            let ident = s.parse_identifier("an extern item parameter")?;
+                            let _ = s.expect_tok_and_fc(
+                                &ctx("an extern parameter description", "`:`"),
+                                |t| matches!(t.kind, TokenKind::Colon),
+                            )?;
                             let ty = s.parse_type()?;
                             Ok((ident, ty))
                         },
@@ -60,12 +88,15 @@ impl<'src> Parser<'src> {
 
                     let (_, factors) = self.grouped_separated(
                         (TokenKind::BracketOpen, TokenKind::BracketClose),
+                        &ctx("a gene factor list", "`[`"),
                         TokenKind::Comma,
+                        &ctx("a gene factor list", "`,` or `]`"),
                         |s| s.parse_quantified(Self::parse_atom_binding),
                     )?;
 
                     let (end_fc, stmts) = self.grouped(
                         (TokenKind::BraceOpen, TokenKind::BraceClose),
+                        &ctx("a gene statement list", "`{`"),
                         Self::parse_gene_statement,
                     )?;
 
@@ -80,13 +111,17 @@ impl<'src> Parser<'src> {
                 TokenKind::Enzyme => {
                     let start_tok = self.next().unwrap();
 
-                    let name = self.parse_identifier()?;
+                    let name = self.parse_identifier("an enzyme item")?;
 
-                    self.expect(|t| t.kind == TokenKind::Colon)?;
+                    self.expect(&ctx("an enzyme item", "`:`"), |t| {
+                        t.kind == TokenKind::Colon
+                    })?;
 
                     let (_, reactants) = self.parse_atom_binding_list()?;
 
-                    self.expect(|t| t.kind == TokenKind::ArrowR)?;
+                    self.expect(&ctx("an enzyme reaction description", "`->`"), |t| {
+                        t.kind == TokenKind::ArrowR
+                    })?;
 
                     let (end_fc, products) = self.parse_product_list()?;
 
@@ -98,7 +133,12 @@ impl<'src> Parser<'src> {
                         products,
                     });
                 }
-                _ => return Err(Error::UnexpectedToken(t.fc.clone())),
+                _ => {
+                    return Err(Error::UnexpectedToken(
+                        t.fc.clone(),
+                        ctx_("a top level item"),
+                    ))
+                }
             }
         }
 
@@ -106,18 +146,24 @@ impl<'src> Parser<'src> {
     }
 
     fn parse_gene_statement(&mut self) -> Result<GeneStatement> {
-        let next = self.peek().ok_or(Error::UnexpectedEnd)?;
+        let next = self
+            .peek()
+            .ok_or_else(|| Error::UnexpectedEnd(self.file, ctx_("a gene statement")))?;
 
         match next.kind {
             TokenKind::Call => {
                 let call_tok = self.next().unwrap();
-                let name = self.parse_identifier()?;
+                let name = self.parse_identifier("a call statement")?;
                 let (end_fc, arguments) = self.grouped_separated(
                     (TokenKind::ParenOpen, TokenKind::ParenClose),
+                    &ctx("a call statement parameter list", "`(`"),
                     TokenKind::Comma,
+                    &ctx("a call statement parameter list", "`,` or `)`"),
                     |s| {
-                        let name = s.parse_identifier()?;
-                        let _ = s.expect_tok_and_fc(|t| matches!(t.kind, TokenKind::Colon))?;
+                        let name = s.parse_identifier("a named argument")?;
+                        let _ = s.expect_tok_and_fc(&ctx("a named argument", "`:`"), |t| {
+                            matches!(t.kind, TokenKind::Colon)
+                        })?;
                         let val = s.parse_expression()?;
                         Ok((name, val))
                     },
@@ -134,32 +180,39 @@ impl<'src> Parser<'src> {
                 let prod = self.parse_quantified(Self::parse_product)?;
                 Ok(GeneStatement::Express(expr_tok.fc.clone(), prod))
             }
-            _ => Err(Error::UnexpectedToken(next.fc.clone())),
+            _ => Err(Error::UnexpectedToken(
+                next.fc.clone(),
+                ctx_("a gene statement"),
+            )),
         }
     }
 
     fn parse_atom_binding_list(&mut self) -> Result<(FC, Vec<Quantified<AtomBinding>>)> {
-        let next = self.peek().ok_or(Error::UnexpectedEnd)?;
+        let next = self
+            .peek()
+            .ok_or_else(|| Error::UnexpectedEnd(self.file, ctx_("an atom binding list")))?;
 
         if next.kind == TokenKind::Nothing {
             let _ = self.next();
             return Ok((next.fc.clone(), vec![]));
         }
 
-        self.separated(TokenKind::OpPlus, |s| {
+        self.separated(TokenKind::OpPlus, &ctx_("an atom binding list"), |s| {
             s.parse_quantified(Self::parse_atom_binding)
         })
     }
 
     fn parse_product_list(&mut self) -> Result<(FC, Vec<Quantified<Product>>)> {
-        let next = self.peek().ok_or(Error::UnexpectedEnd)?;
+        let next = self
+            .peek()
+            .ok_or_else(|| Error::UnexpectedEnd(self.file, ctx_("a product list")))?;
 
         if next.kind == TokenKind::Nothing {
             let _ = self.next();
             return Ok((next.fc.clone(), vec![]));
         }
 
-        self.separated(TokenKind::OpPlus, |s| {
+        self.separated(TokenKind::OpPlus, &ctx_("a product list"), |s| {
             s.parse_quantified(Self::parse_product)
         })
     }
@@ -182,20 +235,24 @@ impl<'src> Parser<'src> {
                 })
             }
         } else {
-            Err(Error::UnexpectedEnd)
+            Err(Error::UnexpectedEnd(self.file, ctx_("a quantified item")))
         }
     }
 
     fn parse_atom_binding(&mut self) -> Result<AtomBinding> {
-        let name = self.parse_identifier()?;
+        let name = self.parse_identifier("an atom binding")?;
 
         let (fc, fields) = if self.peek_kind(|t| t == &TokenKind::ParenOpen) {
             self.grouped_separated(
                 (TokenKind::ParenOpen, TokenKind::ParenClose),
+                &ctx("the fields of a atom binding", "`(`"),
                 TokenKind::Comma,
+                &ctx("the fields of an atom binding", "`,` or `)`"),
                 |s| {
-                    let name = s.parse_identifier()?;
-                    let _ = s.expect(|t| t.kind == TokenKind::Colon)?;
+                    let name = s.parse_identifier("an atom binding field")?;
+                    let _ = s.expect(&ctx("an atom binding field", "`:`"), |t| {
+                        t.kind == TokenKind::Colon
+                    })?;
                     let expr = s.parse_type()?;
                     Ok((name, expr))
                 },
@@ -212,7 +269,7 @@ impl<'src> Parser<'src> {
     }
 
     fn parse_type(&mut self) -> Result<Type> {
-        let id = self.parse_identifier()?;
+        let id = self.parse_identifier("a type")?;
         match id.1.as_str() {
             "int" => Ok(Type::Int(id.fc())),
             "string" => Ok(Type::String(id.fc())),
@@ -220,8 +277,13 @@ impl<'src> Parser<'src> {
         }
     }
 
-    fn parse_identifier(&mut self) -> Result<Identifier> {
-        let (fc, id) = self.expect_tok_and_fc(|t| {
+    fn parse_identifier(
+        &mut self,
+        parent_context: impl Into<Cow<'static, str>>,
+    ) -> Result<Identifier> {
+        let ctx = ctx(parent_context, "an identifier");
+
+        let (fc, id) = self.expect_tok_and_fc(&ctx, |t| {
             if let TokenKind::Identifier(i) = t.kind {
                 Some(i)
             } else {
@@ -232,15 +294,19 @@ impl<'src> Parser<'src> {
     }
 
     fn parse_product(&mut self) -> Result<Product> {
-        let name = self.parse_identifier()?;
+        let name = self.parse_identifier("a product")?;
 
         let (fc, fields) = if self.peek_kind(|t| t == &TokenKind::ParenOpen) {
             self.grouped_separated(
                 (TokenKind::ParenOpen, TokenKind::ParenClose),
+                &ctx("the start of product fields", "`(`"),
                 TokenKind::Comma,
+                &ctx("a product field list", "`,` or `)`"),
                 |s| {
-                    let name = s.parse_identifier()?;
-                    let _ = s.expect(|t| t.kind == TokenKind::Colon)?;
+                    let name = s.parse_identifier("a product field")?;
+                    let _ = s.expect(&ctx("a product field", "`:`"), |t| {
+                        t.kind == TokenKind::Colon
+                    })?;
                     let expr = s.parse_expression()?;
                     Ok((name, expr))
                 },
@@ -280,7 +346,9 @@ impl<'src> Parser<'src> {
     }
 
     fn parse_expression_atom(&mut self) -> Result<Expression> {
-        let next = self.peek().ok_or(Error::UnexpectedEnd)?;
+        let next = self
+            .peek()
+            .ok_or_else(|| Error::UnexpectedEnd(self.file, ctx_("an expression atom")))?;
 
         match &next.kind {
             TokenKind::Identifier(n) => {
@@ -304,7 +372,9 @@ impl<'src> Parser<'src> {
             TokenKind::ParenOpen => {
                 let _ = self.next();
                 let val = self.parse_expression()?;
-                self.expect(|t| t.kind == TokenKind::ParenClose)?;
+                self.expect(&ctx("a nested expression", "`)`"), |t| {
+                    t.kind == TokenKind::ParenClose
+                })?;
                 Ok(val)
             }
             TokenKind::OpMinus => {
@@ -315,7 +385,10 @@ impl<'src> Parser<'src> {
                     expr: Box::new(rhs),
                 })
             }
-            _ => Err(Error::UnexpectedToken(next.fc.clone())),
+            _ => Err(Error::UnexpectedToken(
+                next.fc.clone(),
+                ctx_("an expression atom"),
+            )),
         }
     }
 }
@@ -344,34 +417,42 @@ impl<'src> Parser<'src> {
         }
     }
 
-    fn expect<R: ExpectRet>(&mut self, f: impl FnOnce(&'src Token<'src>) -> R) -> Result<R::Out> {
+    fn expect<R: ExpectRet>(
+        &mut self,
+        context: &ErrorContext,
+        f: impl FnOnce(&'src Token<'src>) -> R,
+    ) -> Result<R::Out> {
         match self.toks {
-            [tok, rest @ ..] => match f(tok).as_result(&tok.fc) {
+            [tok, rest @ ..] => match f(tok).as_result(context, &tok.fc) {
                 Ok(val) => {
                     self.toks = rest;
                     Ok(val)
                 }
                 Err(err) => Err(err),
             },
-            [] => Err(Error::UnexpectedEnd),
+            [] => Err(Error::UnexpectedEnd(self.file, context.clone())),
         }
     }
 
     fn expect_tok_and_fc<R: ExpectRet>(
         &mut self,
+        context: &ErrorContext,
         f: impl FnOnce(&'src Token<'src>) -> R,
     ) -> Result<(&'src FC, R::Out)> {
-        self.expect(|tok| f(tok).as_result(&tok.fc).map(|r| (&tok.fc, r)))
+        self.expect(context, |tok| {
+            f(tok).as_result(context, &tok.fc).map(|r| (&tok.fc, r))
+        })
     }
 
     fn grouped<T>(
         &mut self,
         delim: (TokenKind<'src>, TokenKind<'src>),
+        start_delim_context: &ErrorContext,
         mut f: impl FnMut(&mut Self) -> Result<T>,
     ) -> Result<(FC, Vec<T>)> {
         let mut vals = vec![];
 
-        let (start_fc, ()) = self.expect_tok_and_fc(|t| t.kind == delim.0)?;
+        let (start_fc, ()) = self.expect_tok_and_fc(start_delim_context, |t| t.kind == delim.0)?;
 
         loop {
             if self.peek().map(|t| &t.kind) == Some(&delim.1) {
@@ -387,12 +468,14 @@ impl<'src> Parser<'src> {
     fn grouped_separated<T>(
         &mut self,
         delim: (TokenKind<'src>, TokenKind<'src>),
+        delim_start_context: &ErrorContext,
         separator: TokenKind<'src>,
+        separator_or_delim_end_context: &ErrorContext,
         mut f: impl FnMut(&mut Self) -> Result<T>,
     ) -> Result<(FC, Vec<T>)> {
         let mut vals = vec![];
 
-        let (start_fc, ()) = self.expect_tok_and_fc(|t| t.kind == delim.0)?;
+        let (start_fc, ()) = self.expect_tok_and_fc(delim_start_context, |t| t.kind == delim.0)?;
 
         loop {
             if self.peek().map(|t| &t.kind) == Some(&delim.1) {
@@ -403,7 +486,7 @@ impl<'src> Parser<'src> {
 
             vals.push(f(self)?);
 
-            let (fc, end) = self.expect_tok_and_fc(|tok| {
+            let (fc, end) = self.expect_tok_and_fc(separator_or_delim_end_context, |tok| {
                 if tok.kind == delim.1 {
                     Some(true)
                 } else if tok.kind == separator {
@@ -423,11 +506,15 @@ impl<'src> Parser<'src> {
     fn separated<T: HasFC>(
         &mut self,
         sep: TokenKind<'src>,
+        context: &ErrorContext,
         mut f: impl FnMut(&mut Self) -> Result<T>,
     ) -> Result<(FC, Vec<T>)> {
         let mut vals = vec![];
 
-        let start_fc = &self.peek().ok_or(Error::UnexpectedEnd)?.fc;
+        let start_fc = &self
+            .peek()
+            .ok_or_else(|| Error::UnexpectedEnd(self.file, context.clone()))?
+            .fc;
 
         vals.push(f(self)?);
 
@@ -454,16 +541,16 @@ impl<'src> Parser<'src> {
 trait ExpectRet {
     type Out;
 
-    fn as_result(self, fc: &FC) -> Result<Self::Out>;
+    fn as_result(self, context: &ErrorContext, fc: &FC) -> Result<Self::Out>;
 }
 
 impl<T> ExpectRet for Option<T> {
     type Out = T;
 
-    fn as_result(self, fc: &FC) -> Result<Self::Out> {
+    fn as_result(self, context: &ErrorContext, fc: &FC) -> Result<Self::Out> {
         match self {
             Some(val) => Ok(val),
-            None => Err(Error::UnexpectedToken(fc.clone())),
+            None => Err(Error::UnexpectedToken(fc.clone(), context.clone())),
         }
     }
 }
@@ -471,7 +558,7 @@ impl<T> ExpectRet for Option<T> {
 impl<T> ExpectRet for Result<T> {
     type Out = T;
 
-    fn as_result(self, _: &FC) -> Result<Self::Out> {
+    fn as_result(self, _: &ErrorContext, _: &FC) -> Result<Self::Out> {
         self
     }
 }
@@ -479,10 +566,10 @@ impl<T> ExpectRet for Result<T> {
 impl ExpectRet for bool {
     type Out = ();
 
-    fn as_result(self, fc: &FC) -> Result<Self::Out> {
+    fn as_result(self, context: &ErrorContext, fc: &FC) -> Result<Self::Out> {
         match self {
             true => Ok(()),
-            false => Err(Error::UnexpectedToken(fc.clone())),
+            false => Err(Error::UnexpectedToken(fc.clone(), context.clone())),
         }
     }
 }

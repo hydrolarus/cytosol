@@ -49,7 +49,7 @@ fn run_files(paths: &[PathBuf]) -> Result<(), Box<dyn std::error::Error>> {
             continue;
         }
 
-        let ast = match cytosol_parser::parse_file(&toks) {
+        let ast = match cytosol_parser::parse_file(id, &toks) {
             Ok(val) => val,
             Err(err) => {
                 reporting::report_parse_error(&files, err);

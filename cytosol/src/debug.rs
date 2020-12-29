@@ -22,7 +22,7 @@ pub(crate) fn dump_ast(paths: &[PathBuf]) -> Result<(), Box<dyn std::error::Erro
             continue;
         }
 
-        let ast = match cytosol_parser::parse_file(&toks) {
+        let ast = match cytosol_parser::parse_file(id, &toks) {
             Ok(val) => val,
             Err(err) => {
                 report_parse_error(&files, err);
