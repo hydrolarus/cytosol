@@ -5,7 +5,3 @@ atom B
 atom A(b: B)
 
 // args: --no-colour
-
-// expected stdout:
-
-// expected stderr:

@@ -9,7 +9,7 @@ gene [1 A, 12 C, n: B] // trailing comma
 
 // args: --dump-ast
 
-// expected stdout:
+// expected stderr:
 // (file
 //     ()
 //     (

@@ -9,7 +9,7 @@ enzyme VariableBind[a: A, 0 B, c: C] -> nothing
 
 // args: --dump-ast
 
-// expected stdout:
+// expected stderr:
 // (file
 //     ()
 //     ()

@@ -164,5 +164,8 @@ impl Translator<'_> {
                 self.prog.add_type(Type::Atom(id));
             }
         }
+
+        // enzymes
+        {}
     }
 }

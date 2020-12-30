@@ -8,7 +8,7 @@ gene [Start, 0 StartInhibitor]
 
 // args: --dump-ast
 
-// expected stdout:
+// expected stderr:
 // (file
 //     ()
 //     (

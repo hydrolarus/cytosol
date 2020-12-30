@@ -12,6 +12,7 @@ cytosol-parser = { path = "../cytosol-parser" }
 cytosol-hir = { path = "../cytosol-hir" }
 clap = "3.0.0-beta.2"
 codespan-reporting = "0.11"
+humantime = "2"
 
 [dev-dependencies]
 goldentests = "0.3.7"

@@ -7,7 +7,7 @@ gene [Start]
 
 // args: --dump-ast
 
-// expected stdout:
+// expected stderr:
 // (file
 //     ()
 //     (

@@ -13,7 +13,7 @@ gene [p: Person]
 
 // args: --dump-ast
 
-// expected stdout:
+// expected stderr:
 // (file
 //     ((atom Person ((name string) (age int))) (atom Thing ()))
 //     (
