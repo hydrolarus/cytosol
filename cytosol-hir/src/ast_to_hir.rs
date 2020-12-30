@@ -97,8 +97,7 @@ impl Translator<'_> {
                 }
             }
 
-            let mut deps = petgraph::algo::tarjan_scc(&g);
-            deps.reverse();
+            let deps = petgraph::algo::tarjan_scc(&g);
 
             for group in deps {
                 if group.len() > 1 {
@@ -160,6 +159,9 @@ impl Translator<'_> {
                         self.add_error(Error::UnknownType { name: n.clone() });
                     }
                 }
+
+                let id = self.prog.add_atom(atom.fc, hir_atom).unwrap();
+                self.prog.add_type(Type::Atom(id));
             }
         }
     }

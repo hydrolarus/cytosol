@@ -111,11 +111,18 @@ impl Program {
         let name = val.name.clone();
 
         match self.atoms_by_name.entry(name) {
-            std::collections::hash_map::Entry::Occupied(_) => None,
+            std::collections::hash_map::Entry::Occupied(_) => {
+                dbg!(fc, &val);
+                None
+            }
             std::collections::hash_map::Entry::Vacant(entry) => {
                 let id = self.atoms.alloc(val);
                 let _ = entry.insert(id);
-                self.atoms_fc.insert(id, fc).unwrap();
+                let overwritten = self.atoms_fc.insert(id, fc).is_some();
+                debug_assert_eq!(
+                    overwritten, false,
+                    "FC should only be inserted for a fresh AtomId"
+                );
                 Some(id)
             }
         }

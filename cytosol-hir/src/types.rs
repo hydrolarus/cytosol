@@ -3,6 +3,7 @@ use id_arena::Id;
 
 pub type TypeId = Id<Type>;
 
+#[derive(Debug)]
 pub enum Type {
     Int,
     String,
@@ -11,6 +12,7 @@ pub enum Type {
 
 pub type AtomId = Id<Atom>;
 
+#[derive(Debug)]
 pub struct Atom {
     pub name: Identifier,
     pub field_names: Vec<Identifier>,
@@ -19,6 +21,7 @@ pub struct Atom {
 
 pub type FieldIndex = usize;
 
+#[derive(Debug)]
 pub enum Product {
     Enzyme {
         quantity: usize,
@@ -31,12 +34,14 @@ pub enum Product {
     },
 }
 
+#[derive(Debug)]
 pub enum Bind {
     None,
     Quantity(usize),
     Named(Identifier),
 }
 
+#[derive(Debug)]
 pub enum BindType {
     Atom(AtomId),
     Enzyme(EnzymeId),
@@ -44,6 +49,7 @@ pub enum BindType {
 
 pub type EnzymeId = Id<Enzyme>;
 
+#[derive(Debug)]
 pub struct Enzyme {
     pub name: Identifier,
     pub binds: Vec<(Bind, BindType)>,
@@ -52,6 +58,7 @@ pub struct Enzyme {
 
 pub type ExternId = Id<Extern>;
 
+#[derive(Debug)]
 pub struct Extern {
     pub name: Identifier,
     pub parameters: Vec<TypeId>,
@@ -59,6 +66,7 @@ pub struct Extern {
 
 pub type GeneId = Id<Gene>;
 
+#[derive(Debug)]
 pub struct Gene {
     pub binds: Vec<(Bind, BindType)>,
     pub body: Vec<GeneStatementId>,
@@ -66,6 +74,7 @@ pub struct Gene {
 
 pub type GeneStatementId = Id<GeneStatement>;
 
+#[derive(Debug)]
 pub enum GeneStatement {
     Call {
         ext: ExternId,

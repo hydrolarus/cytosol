@@ -1,0 +1,11 @@
+atom Test(t: Test2)
+atom Test2
+
+atom B
+atom A(b: B)
+
+// args: --no-colour
+
+// expected stdout:
+
+// expected stderr:
