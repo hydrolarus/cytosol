@@ -1,0 +1,15 @@
+atom Test
+
+atom Test(a: int)
+
+// args: --no-colour
+
+// expected stderr:
+// error: redefined atom `Test`
+//   ┌─ ../tests/fail/semantic/redefined_atom.cyt:3:6
+//   │
+// 1 │ atom Test
+//   │      ---- first definition of atom `Test` here
+// 2 │ 
+// 3 │ atom Test(a: int)
+//   │      ^^^^ redefined atom `Test` here

@@ -1,6 +1,6 @@
 pub type FileId = usize;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FC {
     pub file: FileId,
     // as byte offsets in file
@@ -16,7 +16,7 @@ pub struct File {
     pub externs: Vec<Extern>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Identifier(pub FC, pub String);
 
 #[derive(Debug, Clone)]

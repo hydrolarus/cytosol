@@ -7,10 +7,16 @@ use cytosol_syntax::{
 
 use crate::{lexer::TokenKind, Token};
 
+/// The context in which an error appeared in.
 #[derive(Default, Debug, Clone, Copy)]
 pub struct ErrorContext {
+    /// The file context and description of item which is currently being
+    /// parsed. This is so that errors can reference back to the start
+    /// and give more context in the error message.
     pub start: Option<(FC, &'static str)>,
+    /// The description of the type of item that is being parsed.
     pub while_parsing: &'static str,
+    /// What was expected when the error appeared.
     pub expected: Option<&'static str>,
 }
 
@@ -45,6 +51,11 @@ pub enum Error {
 
 type Result<T> = core::result::Result<T, Error>;
 
+/// Parse a list of tokens into the [`File`](cytosol_syntax::types::File) AST.
+///
+/// All tokens should be from the same file, so should have the same FileId.
+/// The `file` parameter is passed so that the FileID can be used even when the
+/// list of tokens is empty.
 pub fn parse_file<'src>(file: FileId, tokens: &'src [Token<'src>]) -> Result<File> {
     let mut p = Parser { file, toks: tokens };
     p.parse_file()

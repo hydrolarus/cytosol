@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 cytosol-syntax = { path = "../cytosol-syntax", features = ["pretty"] }
 cytosol-parser = { path = "../cytosol-parser" }
+cytosol-hir = { path = "../cytosol-hir" }
 clap = "3.0.0-beta.2"
 codespan-reporting = "0.11"
 

@@ -2,6 +2,7 @@
 members = [
     "cytosol-syntax",
     "cytosol-parser",
+    "cytosol-hir",
 
     "cytosol",
 ]
