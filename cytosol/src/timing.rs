@@ -1,10 +1,11 @@
 use std::{
     collections::BTreeMap,
     io::Write,
-    path::{Path, PathBuf},
     time::{Duration, Instant},
     writeln,
 };
+
+use crate::driver::FileName;
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -15,14 +16,14 @@ pub enum FileStage {
 
 pub struct FileSummary {
     // could also be from a REPL or something.
-    path: PathBuf,
+    name: FileName,
     entries: BTreeMap<FileStage, Duration>,
 }
 
 impl FileSummary {
-    pub fn new(path: &Path) -> Self {
+    pub fn new(name: &FileName) -> Self {
         Self {
-            path: path.to_path_buf(),
+            name: name.clone(),
             entries: Default::default(),
         }
     }
@@ -70,7 +71,7 @@ impl TimingReport {
             if file.entries.is_empty() {
                 continue;
             }
-            writeln!(writer, "File summary: {}", file.path.display())?;
+            writeln!(writer, "File: {}", file.name)?;
 
             for (stage, duration) in &file.entries {
                 writeln!(

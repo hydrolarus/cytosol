@@ -8,8 +8,8 @@ use codespan_reporting::{
         Config,
     },
 };
-use cytosol_parser::{ParseError, Token, TokenKind};
-use cytosol_syntax::FileId;
+use cytosol_parser::ParseError;
+use cytosol_syntax::{FileId, FC};
 
 fn colour_choice(conf: &crate::Config) -> ColorChoice {
     if conf.no_colour {
@@ -19,35 +19,27 @@ fn colour_choice(conf: &crate::Config) -> ColorChoice {
     }
 }
 
-pub(crate) fn report_any_lexing_errors<'a>(
+pub(crate) fn report_lexing_error<'a>(
     config: &crate::Config,
     files: &'a impl Files<'a, FileId = FileId>,
-    toks: &[Token<'a>],
-) -> bool {
-    let mut found = false;
-    for tok in toks {
-        if tok.kind == TokenKind::Error {
-            let file_source = files.source(tok.fc.file).expect("Invalid file ID");
-            let source = &file_source.as_ref()[tok.fc.start..tok.fc.end];
+    fc: FC,
+) {
+    let file_source = files.source(fc.file).expect("Invalid file ID");
+    let source = &file_source.as_ref()[fc.start..fc.end];
 
-            let label = Label::primary(tok.fc.file, tok.fc.range());
-            let diag = Diagnostic::error()
-                .with_code("lexer-error")
-                .with_message(format!("Invalid token `{}`", source))
-                .with_labels(vec![label]);
+    let label = Label::primary(fc.file, fc.range());
+    let diag = Diagnostic::error()
+        .with_code("lexer-error")
+        .with_message(format!("Invalid token `{}`", source))
+        .with_labels(vec![label]);
 
-            emit(config, files, &[diag]);
-
-            found = true;
-        }
-    }
-    found
+    emit(config, files, &[diag]);
 }
 
 pub(crate) fn report_parse_error<'a>(
     config: &crate::Config,
     files: &'a impl Files<'a, FileId = FileId>,
-    err: ParseError,
+    err: &ParseError,
 ) {
     let diag = match err {
         ParseError::UnexpectedToken(fc, desc) => {
@@ -94,9 +86,9 @@ pub(crate) fn report_parse_error<'a>(
                 )
             };
 
-            let len = files.source(file).expect("Invalid file ID").as_ref().len();
+            let len = files.source(*file).expect("Invalid file ID").as_ref().len();
 
-            let mut labels = vec![Label::primary(file, len..len).with_message(label_message)];
+            let mut labels = vec![Label::primary(*file, len..len).with_message(label_message)];
 
             if let Some((fc, ref_desc)) = desc.start {
                 labels.push(
@@ -119,7 +111,7 @@ pub(crate) fn report_parse_error<'a>(
 pub(crate) fn report_hir_translate_errors<'a>(
     config: &crate::Config,
     files: &'a impl Files<'a, FileId = FileId>,
-    errs: Vec<cytosol_hir::ast_to_hir::Error>,
+    errs: &[cytosol_hir::ast_to_hir::Error],
 ) {
     let mut diags = vec![];
     for err in errs {
@@ -166,7 +158,7 @@ pub(crate) fn report_hir_translate_errors<'a>(
                     "recursive atom type"
                 };
 
-                let mut defs = defs;
+                let mut defs = defs.clone();
                 defs.sort_by_key(|k| Reverse(*k));
 
                 let labels = defs
