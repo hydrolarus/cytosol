@@ -6,11 +6,11 @@ use cytosol::{
 
 use crate::{
     debug,
-    timing::{FileStage, FileSummary, ProgramStage, TimingReport},
+    perf_track::{FileStage, FileSummary, PerformanceReport, ProgramStage},
 };
 
 pub(crate) struct TestDriver {
-    pub(crate) timing: TimingReport,
+    pub(crate) perf: PerformanceReport,
     dump_tokens: bool,
     dump_ast: bool,
 }
@@ -18,7 +18,7 @@ pub(crate) struct TestDriver {
 impl TestDriver {
     pub(crate) fn new(dump_tokens: bool, dump_ast: bool) -> Self {
         Self {
-            timing: TimingReport::default(),
+            perf: PerformanceReport::default(),
             dump_tokens,
             dump_ast,
         }
@@ -32,9 +32,9 @@ impl Driver for TestDriver {
         file_id: cytosol::syntax::FileId,
         source: &str,
     ) -> Result<File, CompileError> {
-        let mut timing = FileSummary::new(file_name);
+        let mut perf = FileSummary::new(file_name);
 
-        let toks = timing
+        let toks = perf
             .record(FileStage::Lexing, || {
                 cytosol::parser::tokenise(file_id, source)
             })
@@ -44,7 +44,7 @@ impl Driver for TestDriver {
             debug::dump_tokens(&toks);
         }
 
-        let ast = timing
+        let ast = perf
             .record(FileStage::Parsing, || {
                 cytosol::parser::parse_file(file_id, &toks)
             })
@@ -54,7 +54,7 @@ impl Driver for TestDriver {
             debug::dump_ast(&ast);
         }
 
-        self.timing.add_file(timing);
+        self.perf.add_file(perf);
 
         Ok(ast)
     }
@@ -62,7 +62,7 @@ impl Driver for TestDriver {
     fn compile_program(&mut self, files: &[File]) -> Result<Program, CompileError> {
         let mut prog = Program::new();
 
-        self.timing
+        self.perf
             .record(ProgramStage::AstToHir, || {
                 cytosol::hir::ast_to_hir::files_to_hir(&mut prog, files)
             })

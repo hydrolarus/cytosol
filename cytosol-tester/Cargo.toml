@@ -11,6 +11,9 @@ cytosol = { path = "../cytosol" }
 clap = "3.0.0-beta.2"
 humantime = "2"
 pretty = "0.10"
+stats_alloc = "0.1"
+humansize = "1"
+comfy-table = "1"
 
 
 [dev-dependencies]

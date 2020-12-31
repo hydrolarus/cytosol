@@ -41,20 +41,22 @@ pub trait Driver {
     //     -> Result<(), CompileError>
 }
 
-pub struct DriverRunner {
+pub struct DriverRunner<D: Driver = DefaultDriver> {
+    driver: D,
     files: SimpleFiles<FileName, String>,
     file_ids: Vec<FileId>,
 }
 
 impl Default for DriverRunner {
     fn default() -> Self {
-        Self::new()
+        Self::new(DefaultDriver::default())
     }
 }
 
-impl DriverRunner {
-    pub fn new() -> Self {
+impl<D: Driver> DriverRunner<D> {
+    pub fn new(driver: D) -> Self {
         Self {
+            driver,
             files: SimpleFiles::new(),
             file_ids: Default::default(),
         }
@@ -79,18 +81,20 @@ impl DriverRunner {
         self.file_ids.push(id);
     }
 
-    pub fn compile(&mut self, driver: &mut impl Driver) -> Result<Program, CompileError> {
+    pub fn compile(&mut self) -> Result<Program, CompileError> {
         let mut file_asts = vec![];
 
         for id in &self.file_ids {
             let source_file = self.files.get(*id).unwrap();
 
-            let ast = driver.process_file(source_file.name(), *id, source_file.source())?;
+            let ast = self
+                .driver
+                .process_file(source_file.name(), *id, source_file.source())?;
 
             file_asts.push(ast);
         }
 
-        let prog = driver.compile_program(&file_asts)?;
+        let prog = self.driver.compile_program(&file_asts)?;
 
         Ok(prog)
     }
@@ -107,5 +111,40 @@ impl DriverRunner {
                 reporting::report_hir_translate_errors(coloured_output, &self.files, errs);
             }
         }
+    }
+
+    pub fn driver(&self) -> &D {
+        &self.driver
+    }
+
+    pub fn driver_mut(&mut self) -> &mut D {
+        &mut self.driver
+    }
+
+    pub fn into_driver(self) -> D {
+        self.driver
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct DefaultDriver;
+
+impl Driver for DefaultDriver {
+    fn process_file(
+        &mut self,
+        _file_name: &FileName,
+        file_id: FileId,
+        source: &str,
+    ) -> Result<File, CompileError> {
+        let toks = crate::parser::tokenise(file_id, source)
+            .map_err(|fc| CompileError::Lexer { unknown_tok_fc: fc })?;
+
+        crate::parser::parse_file(file_id, &toks).map_err(CompileError::Parser)
+    }
+
+    fn compile_program(&mut self, files: &[File]) -> Result<Program, CompileError> {
+        let mut prog = Program::new();
+        crate::hir::ast_to_hir::files_to_hir(&mut prog, files).map_err(CompileError::AstToHir)?;
+        Ok(prog)
     }
 }

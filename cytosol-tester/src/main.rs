@@ -7,7 +7,12 @@ use driver::TestDriver;
 
 mod debug;
 mod driver;
-mod timing;
+mod perf_track;
+
+use stats_alloc::{StatsAlloc, INSTRUMENTED_SYSTEM};
+
+#[global_allocator]
+pub(crate) static STATS_ALLOC: &StatsAlloc<std::alloc::System> = &INSTRUMENTED_SYSTEM;
 
 #[derive(Debug, Clap)]
 #[clap(version = "0.1", author = "Tia")]
@@ -23,7 +28,10 @@ struct Arguments {
     no_colour: bool,
 
     #[clap(long)]
-    report_timing: bool,
+    perf_report: bool,
+
+    #[clap(long)]
+    per_file_perf_report: bool,
 
     file_paths: Vec<PathBuf>,
 }
@@ -31,15 +39,15 @@ struct Arguments {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Arguments = Arguments::parse();
 
-    let mut runner = DriverRunner::new();
+    let driver = TestDriver::new(args.dump_tokens, args.dump_ast);
+
+    let mut runner = DriverRunner::new(driver);
 
     for file in &args.file_paths {
         runner.add_file_from_path(file)?;
     }
 
-    let mut driver = TestDriver::new(args.dump_tokens, args.dump_ast);
-
-    let _prog = match runner.compile(&mut driver) {
+    let _prog = match runner.compile() {
         Ok(prog) => prog,
         Err(err) => {
             runner.report_error(&err, !args.no_colour);
@@ -47,8 +55,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    if args.report_timing {
-        driver.timing.print_summary(&mut std::io::stdout())?;
+    if args.perf_report {
+        runner
+            .driver()
+            .perf
+            .print_perf_report(&mut std::io::stdout())?;
+    }
+
+    if args.per_file_perf_report {
+        runner
+            .driver()
+            .perf
+            .print_per_file_perf_report(&mut std::io::stdout())?;
     }
 
     Ok(())
