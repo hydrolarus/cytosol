@@ -67,6 +67,13 @@ impl Driver {
         Ok(())
     }
 
+    pub fn add_file_from_string(&mut self, name: impl Into<String>, source: String) {
+        let name = FileName::Virtual(name.into());
+
+        let id = self.files.add(name, source);
+        self.file_ids.push(id);
+    }
+
     pub fn compile(&mut self, options: CompileOptions) -> Result<Program, CompileError> {
         let mut file_asts = vec![];
 
