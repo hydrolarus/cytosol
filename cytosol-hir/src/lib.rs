@@ -1,6 +1,6 @@
 use std::{collections::HashMap, ops::Index};
 
-use cytosol_syntax::FC;
+use cytosol_syntax::{Identifier, FC};
 use id_arena::Arena;
 
 pub mod ast_to_hir;
@@ -28,6 +28,10 @@ pub struct Program {
 
     pub(crate) exprs: Arena<Expression>,
     pub(crate) exprs_fc: HashMap<ExpressionId, FC>,
+    pub(crate) exprs_type: HashMap<ExpressionId, TypeId>,
+
+    pub(crate) type_int_id: TypeId,
+    pub(crate) type_string_id: TypeId,
 }
 
 impl Default for Program {
@@ -64,6 +68,10 @@ impl Program {
             gene_stmts_fc: Default::default(),
             exprs: Default::default(),
             exprs_fc: Default::default(),
+            exprs_type: Default::default(),
+
+            type_int_id,
+            type_string_id,
         }
     }
 
@@ -71,7 +79,20 @@ impl Program {
         match &val {
             Type::Atom(atom_id) => {
                 let atom = &self[*atom_id];
-                let name = atom.name.clone();
+                let name = atom.name.1.clone();
+
+                match self.types_by_name.entry(name) {
+                    std::collections::hash_map::Entry::Occupied(entry) => *entry.get(),
+                    std::collections::hash_map::Entry::Vacant(entry) => {
+                        let id = self.types.alloc(val);
+                        let _ = entry.insert(id);
+                        id
+                    }
+                }
+            }
+            Type::Enzyme(enz_id) => {
+                let enzyme = &self[*enz_id];
+                let name = enzyme.name.1.clone();
 
                 match self.types_by_name.entry(name) {
                     std::collections::hash_map::Entry::Occupied(entry) => *entry.get(),
@@ -87,12 +108,35 @@ impl Program {
         }
     }
 
+    pub fn type_ident(&self, type_id: TypeId) -> Option<&Identifier> {
+        let ty = self.types.get(type_id)?;
+        match ty {
+            Type::Int => None,
+            Type::String => None,
+            Type::Atom(id) => self.atom(*id).map(|a| &a.name),
+            Type::Enzyme(id) => self.enzyme(*id).map(|a| &a.name),
+        }
+    }
+
+    pub fn type_name(&self, type_id: TypeId) -> Option<(String, Option<FC>)> {
+        let ty = self.types.get(type_id)?;
+
+        match ty {
+            Type::Int => Some(("int".to_string(), None)),
+            Type::String => Some(("string".to_string(), None)),
+            _ => {
+                let ident = self.type_ident(type_id).unwrap();
+                Some((ident.1.clone(), Some(ident.0)))
+            }
+        }
+    }
+
     pub fn type_by_name(&self, name: &str) -> Option<TypeId> {
         self.types_by_name.get(name).copied()
     }
 
     pub fn add_extern(&mut self, fc: FC, val: Extern) -> Option<ExternId> {
-        match self.exts_by_name.entry(val.name.clone()) {
+        match self.exts_by_name.entry(val.name.1.clone()) {
             std::collections::hash_map::Entry::Occupied(_) => None,
             std::collections::hash_map::Entry::Vacant(entry) => {
                 let id = self.exts.alloc(val);
@@ -108,7 +152,11 @@ impl Program {
     }
 
     pub fn add_atom(&mut self, fc: FC, val: Atom) -> Option<AtomId> {
-        let name = val.name.clone();
+        let name = val.name.1.clone();
+
+        if self.type_by_name(&name).is_some() {
+            return None;
+        }
 
         match self.atoms_by_name.entry(name) {
             std::collections::hash_map::Entry::Occupied(_) => {
@@ -133,14 +181,22 @@ impl Program {
     }
 
     pub fn add_enzyme(&mut self, fc: FC, val: Enzyme) -> Option<EnzymeId> {
-        let name = val.name.clone();
+        let name = val.name.1.clone();
+
+        if self.type_by_name(&name).is_some() {
+            return None;
+        }
 
         match self.enzymes_by_name.entry(name) {
             std::collections::hash_map::Entry::Occupied(_) => None,
             std::collections::hash_map::Entry::Vacant(entry) => {
                 let id = self.enzymes.alloc(val);
                 let _ = entry.insert(id);
-                self.enzymes_fc.insert(id, fc).unwrap();
+                let overwritten = self.enzymes_fc.insert(id, fc).is_some();
+                debug_assert_eq!(
+                    overwritten, false,
+                    "FC should only be inserted for a fresh EnzymeId"
+                );
                 Some(id)
             }
         }
@@ -162,10 +218,23 @@ impl Program {
         id
     }
 
-    pub fn add_expression(&mut self, fc: FC, val: Expression) -> ExpressionId {
+    pub fn add_expression(&mut self, fc: FC, val: Expression, ty: TypeId) -> ExpressionId {
         let id = self.exprs.alloc(val);
-        self.exprs_fc.insert(id, fc).unwrap();
+        let fc_overwritten = self.exprs_fc.insert(id, fc).is_some();
+        debug_assert_eq!(
+            fc_overwritten, false,
+            "FC should only be inserted for a fresh ExpressionId"
+        );
+        let ty_overwritten = self.exprs_type.insert(id, ty).is_some();
+        debug_assert_eq!(
+            ty_overwritten, false,
+            "TypeId should only be inserted for a fresh ExpressionId"
+        );
         id
+    }
+
+    pub fn expr_type(&self, expr: ExpressionId) -> Option<TypeId> {
+        self.exprs_type.get(&expr).copied()
     }
 }
 

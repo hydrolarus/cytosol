@@ -1,0 +1,17 @@
+atom Result(x: string)
+
+enzyme InvalidPrefixOp[] -> Result(x: -"test")
+
+// args: --no-colour
+
+// expected stderr:
+// error: cannot apply unary operator `-` to type `string`
+//   ┌─ ../tests/fail/semantic/product_type_mismatch_prefix_op_literal.cyt:3:39
+//   │
+// 3 │ enzyme InvalidPrefixOp[] -> Result(x: -"test")
+//   │                                       ^------ this expression has type `string`
+//   │                                       │ 
+//   │                                       this unary operator is incompatible with type `string`
+//   │
+//   = the unary operator `-` is compatible with:
+//     - type `int`

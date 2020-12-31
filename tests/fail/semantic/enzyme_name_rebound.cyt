@@ -1,0 +1,17 @@
+atom A
+atom B
+
+enzyme Test[a: A, a: B] -> A
+
+enzyme Passes[a: A, b: B] -> A // this is fine
+
+// args: --no-colour
+
+// expected stderr:
+// error: Variable name `a` bound multiple times
+//   ┌─ ../tests/fail/semantic/enzyme_name_rebound.cyt:4:19
+//   │
+// 4 │ enzyme Test[a: A, a: B] -> A
+//   │             -     ^ variable bound here
+//   │             │      
+//   │             variable with same name already bound here

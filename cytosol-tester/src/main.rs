@@ -33,13 +33,16 @@ struct Arguments {
     #[clap(long)]
     per_file_perf_report: bool,
 
+    #[clap(long)]
+    no_semantic_analysis: bool,
+
     file_paths: Vec<PathBuf>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Arguments = Arguments::parse();
 
-    let driver = TestDriver::new(args.dump_tokens, args.dump_ast);
+    let driver = TestDriver::new(args.dump_tokens, args.dump_ast, args.no_semantic_analysis);
 
     let mut runner = DriverRunner::new(driver);
 

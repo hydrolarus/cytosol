@@ -1,0 +1,12 @@
+atom int(val: string)
+
+atom Int(val: string) // this is valid
+
+// args: --no-colour
+
+// expected stderr:
+// error: redefined builtin type `int`
+//   ┌─ ../tests/fail/semantic/redefined_builtin_type.cyt:1:6
+//   │
+// 1 │ atom int(val: string)
+//   │      ^^^ this type is redefining a built-in type

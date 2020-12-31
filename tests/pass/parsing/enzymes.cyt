@@ -7,7 +7,7 @@ enzyme Quantifiers[1 A, 2 C] -> 10 D
 
 enzyme VariableBind[a: A, 0 B, c: C] -> nothing
 
-// args: --dump-ast
+// args: --dump-ast --no-semantic-analysis
 
 // expected stderr:
 // (file

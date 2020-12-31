@@ -1,0 +1,12 @@
+atom Test(value: int)
+
+enzyme WrongType[] -> Test(value: "hello")
+
+// args: --no-colour
+
+// expected stderr:
+// error: expected expression of type `int` but found `string`
+//   ┌─ ../tests/fail/semantic/product_field_type_mismatch.cyt:3:35
+//   │
+// 3 │ enzyme WrongType[] -> Test(value: "hello")
+//   │                                   ^^^^^^^ this has type `string` but should be of type `int`

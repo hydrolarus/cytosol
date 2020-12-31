@@ -13,14 +13,16 @@ pub(crate) struct TestDriver {
     pub(crate) perf: PerformanceReport,
     dump_tokens: bool,
     dump_ast: bool,
+    no_semantic_analysis: bool,
 }
 
 impl TestDriver {
-    pub(crate) fn new(dump_tokens: bool, dump_ast: bool) -> Self {
+    pub(crate) fn new(dump_tokens: bool, dump_ast: bool, no_semantic_analysis: bool) -> Self {
         Self {
             perf: PerformanceReport::default(),
             dump_tokens,
             dump_ast,
+            no_semantic_analysis,
         }
     }
 }
@@ -59,15 +61,17 @@ impl Driver for TestDriver {
         Ok(ast)
     }
 
-    fn compile_program(&mut self, files: &[File]) -> Result<Program, CompileError> {
-        let mut prog = Program::new();
+    fn compile_files(&mut self, prog: &mut Program, files: &[File]) -> Result<(), CompileError> {
+        if self.no_semantic_analysis {
+            return Ok(());
+        }
 
         self.perf
             .record(ProgramStage::AstToHir, || {
-                cytosol::hir::ast_to_hir::files_to_hir(&mut prog, files)
+                cytosol::hir::ast_to_hir::files_to_hir(prog, files)
             })
             .map_err(CompileError::AstToHir)?;
 
-        Ok(prog)
+        Ok(())
     }
 }

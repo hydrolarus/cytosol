@@ -35,16 +35,14 @@ pub trait Driver {
         file_id: FileId,
         source: &str,
     ) -> Result<File, CompileError>;
-    fn compile_program(&mut self, files: &[File]) -> Result<Program, CompileError>;
-    // TODO incremental adding of files?
-    // fn incremental_compile(&mut self, prog: &mut Program, files: &[File])
-    //     -> Result<(), CompileError>
+    fn compile_files(&mut self, prog: &mut Program, files: &[File]) -> Result<(), CompileError>;
 }
 
 pub struct DriverRunner<D: Driver = DefaultDriver> {
     driver: D,
     files: SimpleFiles<FileName, String>,
     file_ids: Vec<FileId>,
+    program: Program,
 }
 
 impl Default for DriverRunner {
@@ -59,6 +57,7 @@ impl<D: Driver> DriverRunner<D> {
             driver,
             files: SimpleFiles::new(),
             file_ids: Default::default(),
+            program: Program::default(),
         }
     }
 
@@ -81,7 +80,7 @@ impl<D: Driver> DriverRunner<D> {
         self.file_ids.push(id);
     }
 
-    pub fn compile(&mut self) -> Result<Program, CompileError> {
+    pub fn compile(&mut self) -> Result<(), CompileError> {
         let mut file_asts = vec![];
 
         for id in &self.file_ids {
@@ -94,9 +93,9 @@ impl<D: Driver> DriverRunner<D> {
             file_asts.push(ast);
         }
 
-        let prog = self.driver.compile_program(&file_asts)?;
+        self.driver.compile_files(&mut self.program, &file_asts)?;
 
-        Ok(prog)
+        Ok(())
     }
 
     pub fn report_error(&self, err: &CompileError, coloured_output: bool) {
@@ -108,7 +107,12 @@ impl<D: Driver> DriverRunner<D> {
                 reporting::report_parse_error(coloured_output, &self.files, err);
             }
             CompileError::AstToHir(errs) => {
-                reporting::report_hir_translate_errors(coloured_output, &self.files, errs);
+                reporting::report_hir_translate_errors(
+                    coloured_output,
+                    &self.files,
+                    &self.program,
+                    errs,
+                );
             }
         }
     }
@@ -142,9 +146,8 @@ impl Driver for DefaultDriver {
         crate::parser::parse_file(file_id, &toks).map_err(CompileError::Parser)
     }
 
-    fn compile_program(&mut self, files: &[File]) -> Result<Program, CompileError> {
-        let mut prog = Program::new();
-        crate::hir::ast_to_hir::files_to_hir(&mut prog, files).map_err(CompileError::AstToHir)?;
-        Ok(prog)
+    fn compile_files(&mut self, prog: &mut Program, files: &[File]) -> Result<(), CompileError> {
+        crate::hir::ast_to_hir::files_to_hir(prog, files).map_err(CompileError::AstToHir)?;
+        Ok(())
     }
 }

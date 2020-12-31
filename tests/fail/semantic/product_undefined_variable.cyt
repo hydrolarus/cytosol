@@ -1,0 +1,14 @@
+atom Value(val: int)
+
+enzyme UndefinedVariable[a: Value] -> Value(val: b.val)
+
+enzyme DefinedVariable[a: Value] -> Value(val: a.val) // this is valid
+
+// args: --no-colour
+
+// expected stderr:
+// error: undefined variable `b`
+//   ┌─ ../tests/fail/semantic/product_undefined_variable.cyt:3:50
+//   │
+// 3 │ enzyme UndefinedVariable[a: Value] -> Value(val: b.val)
+//   │                                                  ^ undefined variable

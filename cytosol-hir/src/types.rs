@@ -1,18 +1,19 @@
-use cytosol_syntax::{InfixOperator, PrefixOperator};
+use cytosol_syntax::{Identifier, InfixOperator, PrefixOperator};
 use id_arena::Id;
 
 pub type TypeId = Id<Type>;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Type {
     Int,
     String,
     Atom(AtomId),
+    Enzyme(EnzymeId),
 }
 
 pub type AtomId = Id<Atom>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Atom {
     pub name: Identifier,
     pub field_names: Vec<Identifier>,
@@ -36,7 +37,6 @@ pub enum Product {
 
 #[derive(Debug)]
 pub enum Bind {
-    None,
     Quantity(usize),
     Named(Identifier),
 }
@@ -84,8 +84,6 @@ pub enum GeneStatement {
 }
 
 pub type ExpressionId = Id<Expression>;
-
-pub type Identifier = String;
 
 #[derive(Debug, Clone)]
 pub enum Expression {
