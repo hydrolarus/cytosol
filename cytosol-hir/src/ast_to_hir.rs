@@ -28,7 +28,7 @@ pub enum Error {
     UnknownType { name: ast::Identifier },
 }
 
-pub fn files_to_hir(prog: &mut Program, files: &[ast::File]) -> Option<Vec<Error>> {
+pub fn files_to_hir(prog: &mut Program, files: &[ast::File]) -> Result<(), Vec<Error>> {
     let mut t = Translator {
         prog,
         errors: Default::default(),
@@ -37,9 +37,9 @@ pub fn files_to_hir(prog: &mut Program, files: &[ast::File]) -> Option<Vec<Error
     let _ = t.translate_files(files);
 
     if t.errors.is_empty() {
-        None
+        Ok(())
     } else {
-        Some(t.errors)
+        Err(t.errors)
     }
 }
 

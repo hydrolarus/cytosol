@@ -11,5 +11,3 @@ cytosol-syntax = { path = "../cytosol-syntax" }
 cytosol-parser = { path = "../cytosol-parser" }
 cytosol-hir = { path = "../cytosol-hir" }
 codespan-reporting = "0.11"
-humantime = "2"
-pretty = "0.10"

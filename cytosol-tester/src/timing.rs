@@ -5,7 +5,7 @@ use std::{
     writeln,
 };
 
-use crate::driver::FileName;
+use cytosol::driver::FileName;
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]

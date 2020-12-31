@@ -5,5 +5,5 @@ members = [
     "cytosol-hir",
 
     "cytosol",
-    "cytosolc",
+    "cytosol-tester",
 ]

@@ -1,11 +1,7 @@
+pub use cytosol_hir as hir;
+pub use cytosol_parser as parser;
+pub use cytosol_syntax as syntax;
+
 pub mod driver;
 
-mod debug;
 mod reporting;
-
-pub mod timing;
-
-pub struct Config {
-    /// Do not display colours in the terminal
-    pub no_colour: bool,
-}

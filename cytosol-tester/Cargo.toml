@@ -1,5 +1,5 @@
 [package]
-name = "cytosolc"
+name = "cytosol-tester"
 version = "0.1.0"
 authors = ["tiatomee <tia-github@poto.cafe>"]
 edition = "2018"
@@ -9,6 +9,9 @@ edition = "2018"
 [dependencies]
 cytosol = { path = "../cytosol" }
 clap = "3.0.0-beta.2"
+humantime = "2"
+pretty = "0.10"
+
 
 [dev-dependencies]
 goldentests = "0.3.7"

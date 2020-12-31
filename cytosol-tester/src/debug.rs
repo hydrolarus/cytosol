@@ -1,9 +1,11 @@
-use cytosol_parser::Token;
 use pretty::RcDoc as Doc;
 
-use cytosol_syntax::{
-    Atom, AtomBinding, AtomBindingAttribute, Enzyme, Expression, Extern, File, Gene, GeneStatement,
-    Identifier, InfixOperator, Literal, PrefixOperator, Product, Type,
+use cytosol::{
+    parser::Token,
+    syntax::{
+        Atom, AtomBinding, AtomBindingAttribute, Enzyme, Expression, Extern, File, Gene,
+        GeneStatement, Identifier, InfixOperator, Literal, PrefixOperator, Product, Type,
+    },
 };
 
 pub(crate) fn dump_tokens(toks: &[Token]) {
