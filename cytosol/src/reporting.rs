@@ -196,6 +196,14 @@ pub(crate) fn report_hir_translate_errors<'a>(
                     .with_message(message)
                     .with_labels(vec![label])
             }
+            Error::InvalidReactantType { name } => {
+                let message = format!("type `{}` cannot be used in a reactant list", name.1);
+                let label = Label::primary(name.0.file, name.0.range())
+                    .with_message("this type cannot be used as a reactant");
+                Diagnostic::error()
+                    .with_message(message)
+                    .with_labels(vec![label])
+            }
             Error::RedefinedBuiltinType { redef_name } => {
                 let message = format!("redefined builtin type `{}`", redef_name.1);
                 let label = Label::primary(redef_name.0.file, redef_name.0.range())

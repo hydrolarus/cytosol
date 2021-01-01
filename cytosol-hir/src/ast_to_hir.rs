@@ -38,6 +38,9 @@ pub enum Error {
     #[error("Type {} unknown", .name.1)]
     UnknownType { name: Identifier },
 
+    #[error("Type {} can't be used as a reactant", .name.1)]
+    InvalidReactantType { name: Identifier },
+
     #[error("Type mismatch")]
     TypeMismatch {
         fc: FC,
@@ -338,7 +341,7 @@ impl Translator<'_> {
                 } else if let Some(enz_id) = self.prog.enzyme_by_name(&reactant.name.1) {
                     binds.push((bind_attr, BindType::Enzyme(enz_id)));
                 } else {
-                    self.add_error(Error::UnknownType {
+                    self.add_error(Error::InvalidReactantType {
                         name: reactant.name.clone(),
                     });
                 }
