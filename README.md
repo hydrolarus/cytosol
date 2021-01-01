@@ -6,8 +6,8 @@ An embeddable programming language somewhat resembling cellular processes.
 
 * [x] tokenising
 * [x] parsing
-* [ ] semantic analysis and translation **⇐ in progress**
-* [ ] runtime system and host API
+* [x] semantic analysis and translation
+* [ ] runtime system and host API **⇐ in progress**
 
 ## Overview of the language
 
