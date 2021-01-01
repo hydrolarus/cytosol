@@ -135,9 +135,42 @@ impl Translator<'_> {
     }
 
     fn translate_files(&mut self, files: &[ast::File]) {
+        // enzymes can be mutually recursive, so they all need to be added
+        // without any binding information. The binding information then
+        // gets added later on
+        let mut enzymes = vec![];
+        for file in files {
+            for e in &file.enzymes {
+                let enzyme = Enzyme {
+                    name: e.name.clone(),
+                    binds: vec![],
+                    products: vec![],
+                };
+                if let Some(id) = self.prog.add_enzyme(e.fc, enzyme) {
+                    self.prog.add_type(Type::Enzyme(id));
+                    enzymes.push((id, e));
+                } else {
+                    let type_id = self.prog.type_by_name(&e.name.1).unwrap();
+                    let prev_name = if let Some(n) = self.prog.type_ident(type_id) {
+                        n.clone()
+                    } else {
+                        self.add_error(Error::RedefinedBuiltinType {
+                            redef_name: e.name.clone(),
+                        });
+                        continue;
+                    };
+                    self.add_error(Error::RedefinedItem {
+                        orig_name: prev_name,
+                        redef_name: e.name.clone(),
+                    });
+                    continue;
+                }
+            }
+        }
+
         self.setup_atoms(files);
 
-        self.setup_enzymes(files);
+        self.setup_enzymes(&enzymes);
     }
 
     fn setup_atoms(&mut self, files: &[ast::File]) {
@@ -262,40 +295,7 @@ impl Translator<'_> {
 
     // NOTE: atoms must be setup first! Otherwise they can't be used as products or
     // reactant types
-    fn setup_enzymes(&mut self, files: &[ast::File]) {
-        // enzymes can be mutually recursive, so they all need to be added
-        // without any binding information. The binding information then
-        // gets added later on
-        let mut enzymes = vec![];
-        for file in files {
-            for e in &file.enzymes {
-                let enzyme = Enzyme {
-                    name: e.name.clone(),
-                    binds: vec![],
-                    products: vec![],
-                };
-                if let Some(id) = self.prog.add_enzyme(e.fc, enzyme) {
-                    self.prog.add_type(Type::Enzyme(id));
-                    enzymes.push((id, e));
-                } else {
-                    let type_id = self.prog.type_by_name(&e.name.1).unwrap();
-                    let prev_name = if let Some(n) = self.prog.type_ident(type_id) {
-                        n.clone()
-                    } else {
-                        self.add_error(Error::RedefinedBuiltinType {
-                            redef_name: e.name.clone(),
-                        });
-                        continue;
-                    };
-                    self.add_error(Error::RedefinedItem {
-                        orig_name: prev_name,
-                        redef_name: e.name.clone(),
-                    });
-                    continue;
-                }
-            }
-        }
-
+    fn setup_enzymes(&mut self, enzymes: &[(EnzymeId, &ast::Enzyme)]) {
         // after they have all been added their binds are filled
         for (id, e) in enzymes {
             let mut binds = vec![];
@@ -350,7 +350,7 @@ impl Translator<'_> {
                 .flat_map(|p| self.translate_product(&bound_vars, p))
                 .collect();
 
-            let hir_e = &mut self.prog.enzymes[id];
+            let hir_e = &mut self.prog.enzymes[*id];
             hir_e.binds = binds;
             hir_e.products = products;
         }

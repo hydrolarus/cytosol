@@ -1,0 +1,3 @@
+atom HoldsEnzyme(e: SomeEnzyme)
+
+enzyme SomeEnzyme[] -> nothing
