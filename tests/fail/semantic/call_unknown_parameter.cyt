@@ -1,0 +1,18 @@
+extern EmitPersonInfo(name: string, age: int)
+
+gene []
+{
+    call EmitPersonInfo(name: "test", age: 20, address: "Example street")
+}
+
+// args: --no-colour
+
+// expected stderr:
+// error: unknown parameter `address` in call to `EmitPersonInfo`
+//   ┌─ ../tests/fail/semantic/call_unknown_parameter.cyt:5:48
+//   │
+// 1 │ extern EmitPersonInfo(name: string, age: int)
+//   │        -------------- no such parameter in the definition of the extern function
+//   ·
+// 5 │     call EmitPersonInfo(name: "test", age: 20, address: "Example street")
+//   │                                                ^^^^^^^ unknown parameter

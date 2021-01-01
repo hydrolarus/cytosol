@@ -1,5 +1,8 @@
 extern print_line(s: string)
 
+atom Start
+atom StartInhibitor
+
 gene [Start, 0 StartInhibitor]
 {
     express StartInhibitor
@@ -10,7 +13,7 @@ gene [Start, 0 StartInhibitor]
 
 // expected stderr:
 // (file
-//     ()
+//     ((atom Start ()) (atom StartInhibitor ()))
 //     (
 //         (gene
 //             ((atom Start) (atom 0 StartInhibitor))

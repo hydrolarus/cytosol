@@ -196,10 +196,29 @@ pub(crate) fn report_hir_translate_errors<'a>(
                     .with_message(message)
                     .with_labels(vec![label])
             }
+            Error::UnknownExtern { name } => {
+                let message = format!("unknown extern function `{}`", name.1);
+                let label = Label::primary(name.0.file, name.0.range())
+                    .with_message("unknown extern function");
+                Diagnostic::error()
+                    .with_message(message)
+                    .with_labels(vec![label])
+            }
             Error::InvalidReactantType { name } => {
                 let message = format!("type `{}` cannot be used in a reactant list", name.1);
                 let label = Label::primary(name.0.file, name.0.range())
                     .with_message("this type cannot be used as a reactant");
+                Diagnostic::error()
+                    .with_message(message)
+                    .with_labels(vec![label])
+            }
+            Error::InvalidFactorType { name } => {
+                let message = format!(
+                    "type `{}` cannot be used in an execution factor list",
+                    name.1
+                );
+                let label = Label::primary(name.0.file, name.0.range())
+                    .with_message("this type cannot be used as an execution factor");
                 Diagnostic::error()
                     .with_message(message)
                     .with_labels(vec![label])
@@ -493,6 +512,68 @@ pub(crate) fn report_hir_translate_errors<'a>(
                         .with_message("duplicate parameter name"),
                     Label::secondary(original_param.0.file, original_param.0.range())
                         .with_message("parameter with the same name declared here before"),
+                ];
+
+                Diagnostic::error()
+                    .with_message(message)
+                    .with_labels(labels)
+            }
+            Error::CallDuplicateParameter {
+                ext_name,
+                duplicate_param,
+                original_param,
+            } => {
+                let message = format!(
+                    "duplicated parameter `{}` in call to `{}`",
+                    duplicate_param.1, ext_name.1
+                );
+
+                let labels = vec![
+                    Label::primary(duplicate_param.0.file, duplicate_param.0.range())
+                        .with_message("this is a duplicate parameter"),
+                    Label::secondary(original_param.0.file, original_param.0.range())
+                        .with_message("paremeter already supplied here"),
+                ];
+
+                Diagnostic::error()
+                    .with_message(message)
+                    .with_labels(labels)
+            }
+            Error::CallMissingParameter {
+                ext_name,
+                call_fc,
+                missing_param,
+            } => {
+                let message = format!(
+                    "call to `{}` is missing the `{}` parameter",
+                    ext_name.1, missing_param.1
+                );
+
+                let labels = vec![
+                    Label::primary(call_fc.file, call_fc.range())
+                        .with_message("this call statement is incomplete"),
+                    Label::secondary(missing_param.0.file, missing_param.0.range())
+                        .with_message("this parameter is missing"),
+                ];
+
+                Diagnostic::error()
+                    .with_message(message)
+                    .with_labels(labels)
+            }
+            Error::CallUnknownParameter {
+                ext_name,
+                parameter,
+            } => {
+                let message = format!(
+                    "unknown parameter `{}` in call to `{}`",
+                    parameter.1, ext_name.1
+                );
+
+                let labels = vec![
+                    Label::primary(parameter.0.file, parameter.0.range())
+                        .with_message("unknown parameter"),
+                    Label::secondary(ext_name.0.file, ext_name.0.range())
+                        .with_message("no such parameter in the definition of the extern function"),
                 ];
 
                 Diagnostic::error()

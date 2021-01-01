@@ -1,0 +1,18 @@
+extern EmitCoord(x: int, y: int)
+
+gene []
+{
+    call EmitCoord(x: 12)
+}
+
+// args: --no-colour
+
+// expected stderr:
+// error: call to `EmitCoord` is missing the `y` parameter
+//   ┌─ ../tests/fail/semantic/call_missing_parameter.cyt:5:5
+//   │
+// 1 │ extern EmitCoord(x: int, y: int)
+//   │                          - this parameter is missing
+//   ·
+// 5 │     call EmitCoord(x: 12)
+//   │     ^^^^^^^^^^^^^^^^^^^^^ this call statement is incomplete

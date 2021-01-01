@@ -1,0 +1,15 @@
+extern print_string(s: string)
+
+atom NameInput(name: string)
+atom NameDegrader
+
+enzyme RemoveNameInput[NameInput, NameDegrader] -> nothing
+
+gene [n: NameInput]
+{
+    call print_string(s: "Greeting, ")
+    call print_string(s: n.name)
+    call print_string(s: "!\n")
+
+    express NameDegrader
+}

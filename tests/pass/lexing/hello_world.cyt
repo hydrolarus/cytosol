@@ -1,5 +1,8 @@
 extern print_line(s: string)
 
+atom Start
+atom StartInhibitor
+
 gene [Start, 0 StartInhibitor]
 {
     express StartInhibitor
@@ -16,6 +19,10 @@ gene [Start, 0 StartInhibitor]
 // Colon
 // Identifier("string")
 // ParenClose
+// Atom
+// Identifier("Start")
+// Atom
+// Identifier("StartInhibitor")
 // Gene
 // BracketOpen
 // Identifier("Start")

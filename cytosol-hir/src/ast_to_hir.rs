@@ -38,8 +38,14 @@ pub enum Error {
     #[error("Type {} unknown", .name.1)]
     UnknownType { name: Identifier },
 
+    #[error("Extern function {} does not exist", .name.1)]
+    UnknownExtern { name: Identifier },
+
     #[error("Type {} can't be used as a reactant", .name.1)]
     InvalidReactantType { name: Identifier },
+
+    #[error("Type {} can't be used as an execution factor", .name.1)]
+    InvalidFactorType { name: Identifier },
 
     #[error("Type mismatch")]
     TypeMismatch {
@@ -115,6 +121,26 @@ pub enum Error {
         duplicate_param: Identifier,
         original_param: Identifier,
     },
+
+    #[error("Duplicate parameter `{}` in call to `{}`", .duplicate_param.1, .ext_name.1)]
+    CallDuplicateParameter {
+        ext_name: Identifier,
+        duplicate_param: Identifier,
+        original_param: Identifier,
+    },
+
+    #[error("Missing parameter `{}` in call to `{}`", .missing_param.1, .ext_name.1)]
+    CallMissingParameter {
+        ext_name: Identifier,
+        call_fc: FC,
+        missing_param: Identifier,
+    },
+
+    #[error("Unknown parameter `{}` in call to `{}`", .parameter.1, .ext_name.1)]
+    CallUnknownParameter {
+        ext_name: Identifier,
+        parameter: Identifier,
+    },
 }
 
 pub fn files_to_hir(prog: &mut Program, files: &[ast::File]) -> Result<(), Vec<Error>> {
@@ -183,6 +209,8 @@ impl Translator<'_> {
         self.setup_enzymes(&enzymes);
 
         self.setup_externs(files);
+
+        self.setup_genes(files);
     }
 
     fn setup_atoms(&mut self, files: &[ast::File]) {
@@ -421,6 +449,69 @@ impl Translator<'_> {
         }
     }
 
+    fn setup_genes(&mut self, files: &[ast::File]) {
+        for file in files {
+            for gene in &file.genes {
+                let mut binds = vec![];
+                let mut bound_vars = VariableMap::new();
+
+                for factor in &gene.factors {
+                    let bind_attr = match &factor.attr {
+                        Some(ast::AtomBindingAttribute::Quantity(_, n)) => {
+                            if *n == 0 {
+                                Bind::None
+                            } else {
+                                Bind::Quantity(*n)
+                            }
+                        }
+                        Some(ast::AtomBindingAttribute::Name(name)) => {
+                            let ty = if let Some(ty) = self.prog.type_by_name(&factor.name.1) {
+                                ty
+                            } else {
+                                self.add_error(Error::UnknownType {
+                                    name: factor.name.clone(),
+                                });
+                                continue;
+                            };
+                            if let Some((prev, _)) = bound_vars.insert(&name.1, (name.clone(), ty))
+                            {
+                                self.add_error(Error::NameRebound {
+                                    item_fc: gene.fc,
+                                    name: name.clone(),
+                                    orig_name: prev,
+                                });
+                                continue;
+                            }
+
+                            Bind::Named(name.clone())
+                        }
+                        None => Bind::Quantity(1),
+                    };
+
+                    if let Some(atom_id) = self.prog.atom_by_name(&factor.name.1) {
+                        binds.push((bind_attr, BindType::Atom(atom_id)))
+                    } else if let Some(enz_id) = self.prog.enzyme_by_name(&factor.name.1) {
+                        binds.push((bind_attr, BindType::Enzyme(enz_id)));
+                    } else {
+                        self.add_error(Error::InvalidFactorType {
+                            name: factor.name.clone(),
+                        });
+                    }
+                }
+
+                let body = gene
+                    .body
+                    .iter()
+                    .filter_map(|s| self.translate_gene_statement(&bound_vars, s))
+                    .collect();
+
+                let hir_gene = Gene { binds, body };
+
+                self.prog.add_gene(gene.fc(), hir_gene);
+            }
+        }
+    }
+
     fn translate_product(&mut self, vars: &VariableMap, product: &ast::Product) -> Option<Product> {
         let type_id = if let Some(id) = self.prog.type_by_name(&product.name.1) {
             id
@@ -523,6 +614,107 @@ impl Translator<'_> {
                     quantity: product.quantity.map(|(_, n)| n).unwrap_or(1),
                     enzyme: *id,
                 })
+            }
+        }
+    }
+
+    fn translate_gene_statement(
+        &mut self,
+        vars: &VariableMap,
+        stmt: &ast::GeneStatement,
+    ) -> Option<GeneStatementId> {
+        let fc = stmt.fc();
+        match stmt {
+            ast::GeneStatement::Call {
+                fc: _,
+                name,
+                arguments,
+            } => {
+                use std::collections::btree_map::Entry;
+
+                let ext_id = if let Some(id) = self.prog.extern_by_name(&name.1) {
+                    id
+                } else {
+                    self.add_error(Error::UnknownExtern { name: name.clone() });
+                    return None;
+                };
+
+                let ext = self.prog[ext_id].clone();
+
+                let mut errs = vec![];
+
+                // already ordered/sorted by parameter name
+                let mut args = vec![];
+                let mut call_params = BTreeMap::new();
+
+                for (ident, expr) in arguments {
+                    match call_params.entry(ident.1.as_str()) {
+                        Entry::Vacant(e) => {
+                            e.insert((ident, expr));
+                        }
+                        Entry::Occupied(e) => {
+                            let (orig_ident, _) = e.get();
+                            errs.push(Error::CallDuplicateParameter {
+                                ext_name: ext.name.clone(),
+                                duplicate_param: ident.clone(),
+                                original_param: (*orig_ident).clone(),
+                            });
+                            continue;
+                        }
+                    }
+                }
+
+                for (param_name, param_ty) in ext.parameter_names.iter().zip(&ext.parameters) {
+                    // find the parameter inside the extern function def
+
+                    if let Some((_, expr)) = call_params.remove(&param_name.1.as_str()) {
+                        if let Some(expr_id) = self.translate_expr(vars, expr) {
+                            let ty = self.prog.expr_type(expr_id).unwrap();
+                            if param_ty != &ty {
+                                errs.push(Error::TypeMismatch {
+                                    fc: expr.fc(),
+                                    expected: *param_ty,
+                                    found: ty,
+                                });
+                                continue;
+                            }
+                            args.push(expr_id);
+                        } else {
+                            continue;
+                        }
+                    } else {
+                        errs.push(Error::CallMissingParameter {
+                            ext_name: ext.name.clone(),
+                            call_fc: fc,
+                            missing_param: param_name.clone(),
+                        });
+                    }
+                }
+
+                for (_, (ident, _)) in call_params {
+                    errs.push(Error::CallUnknownParameter {
+                        ext_name: ext.name.clone(),
+                        parameter: ident.clone(),
+                    });
+                }
+
+                self.errors.extend(errs);
+
+                let stmt = GeneStatement::Call {
+                    ext: ext_id,
+                    arguments: args,
+                };
+
+                let id = self.prog.add_gene_statement(fc, stmt);
+
+                Some(id)
+            }
+            ast::GeneStatement::Express(_, prod) => {
+                let product = self.translate_product(vars, prod)?;
+                let id = self
+                    .prog
+                    .add_gene_statement(fc, GeneStatement::Express(product));
+                Some(id)
             }
         }
     }

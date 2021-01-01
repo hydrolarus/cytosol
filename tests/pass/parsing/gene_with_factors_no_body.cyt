@@ -7,7 +7,7 @@ gene []
 gene [1 A, 12 C, n: B] // trailing comma
 {}
 
-// args: --dump-ast
+// args: --dump-ast --no-semantic-analysis
 
 // expected stderr:
 // (file

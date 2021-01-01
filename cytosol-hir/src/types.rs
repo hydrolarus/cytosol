@@ -59,7 +59,7 @@ pub struct Enzyme {
 
 pub type ExternId = Id<Extern>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Extern {
     pub name: Identifier,
     pub parameter_names: Vec<Identifier>,

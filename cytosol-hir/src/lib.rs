@@ -212,7 +212,11 @@ impl Program {
 
     pub fn add_gene(&mut self, fc: FC, val: Gene) -> GeneId {
         let id = self.genes.alloc(val);
-        self.genes_fc.insert(id, fc).unwrap();
+        let overwritten = self.genes_fc.insert(id, fc).is_some();
+        debug_assert_eq!(
+            overwritten, false,
+            "FC should only be inserted for a fresh GeneId"
+        );
         id
     }
 

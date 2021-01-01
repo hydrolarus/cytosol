@@ -1,0 +1,13 @@
+gene []
+{
+    call huh(x: 12)
+}
+
+// args: --no-colour
+
+// expected stderr:
+// error: unknown extern function `huh`
+//   ┌─ ../tests/fail/semantic/unknown_extern.cyt:3:10
+//   │
+// 3 │     call huh(x: 12)
+//   │          ^^^ unknown extern function

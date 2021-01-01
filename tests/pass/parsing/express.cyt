@@ -1,3 +1,7 @@
+atom A
+atom B(x: int, y: string)
+atom C(n: int)
+
 gene []
 {
     express A
@@ -9,7 +13,7 @@ gene []
 
 // expected stderr:
 // (file
-//     ()
+//     ((atom A ()) (atom B ((x int) (y string))) (atom C ((n int))))
 //     (
 //         (gene
 //             ()

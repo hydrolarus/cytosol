@@ -1,0 +1,17 @@
+extern EmitInt(x: int)
+
+gene []
+{
+    call EmitInt(x: 12, x: 55)
+}
+
+// args: --no-colour
+
+// expected stderr:
+// error: duplicated parameter `x` in call to `EmitInt`
+//   ┌─ ../tests/fail/semantic/call_duplicate_parameter.cyt:5:25
+//   │
+// 5 │     call EmitInt(x: 12, x: 55)
+//   │                  -      ^ this is a duplicate parameter
+//   │                  │       
+//   │                  paremeter already supplied here

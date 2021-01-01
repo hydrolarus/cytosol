@@ -1,5 +1,7 @@
 extern print_line(s: string)
 
+atom Start
+
 gene [Start]
 {
     call print_line(s: "Hello!")
@@ -9,7 +11,7 @@ gene [Start]
 
 // expected stderr:
 // (file
-//     ()
+//     ((atom Start ()))
 //     (
 //         (gene
 //             ((atom Start))
