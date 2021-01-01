@@ -37,6 +37,7 @@ pub enum Product {
 
 #[derive(Debug)]
 pub enum Bind {
+    None,
     Quantity(usize),
     Named(Identifier),
 }

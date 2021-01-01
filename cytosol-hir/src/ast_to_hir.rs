@@ -303,7 +303,13 @@ impl Translator<'_> {
 
             for reactant in &e.reactants {
                 let bind_attr = match &reactant.attr {
-                    Some(ast::AtomBindingAttribute::Quantity(_, n)) => Bind::Quantity(*n),
+                    Some(ast::AtomBindingAttribute::Quantity(_, n)) => {
+                        if *n == 0 {
+                            Bind::None
+                        } else {
+                            Bind::Quantity(*n)
+                        }
+                    }
                     Some(ast::AtomBindingAttribute::Name(name)) => {
                         let ty = if let Some(ty) = self.prog.type_by_name(&reactant.name.1) {
                             ty
