@@ -1,0 +1,10 @@
+extern emit_thing(x: Thing)
+
+// args: --no-colour
+
+// expected stderr:
+// error: unknown type `Thing`
+//   ┌─ ../tests/fail/semantic/extern_parameter_unknown_type.cyt:1:22
+//   │
+// 1 │ extern emit_thing(x: Thing)
+//   │                      ^^^^^ unknown type

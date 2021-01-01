@@ -478,6 +478,27 @@ pub(crate) fn report_hir_translate_errors<'a>(
                     .with_message(message)
                     .with_labels(labels)
             }
+            Error::ExternDuplicateParameterName {
+                ext_name,
+                duplicate_param,
+                original_param,
+            } => {
+                let message = format!(
+                    "duplicate parameter `{}` on extern function `{}`",
+                    duplicate_param.1, ext_name.1
+                );
+
+                let labels = vec![
+                    Label::primary(duplicate_param.0.file, duplicate_param.0.range())
+                        .with_message("duplicate parameter name"),
+                    Label::secondary(original_param.0.file, original_param.0.range())
+                        .with_message("parameter with the same name declared here before"),
+                ];
+
+                Diagnostic::error()
+                    .with_message(message)
+                    .with_labels(labels)
+            }
         };
 
         diags.push(diag);

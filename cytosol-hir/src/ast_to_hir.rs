@@ -78,14 +78,14 @@ pub enum Error {
         missing_field: Identifier,
     },
 
-    #[error("")]
+    #[error("Duplicated field {} on atom {}", .duplicate_field.1, .atom_name.1)]
     ProductDuplicateAtomField {
         atom_name: Identifier,
         duplicate_field: Identifier,
         original_field: Identifier,
     },
 
-    #[error("")]
+    #[error("Unknown field {} on atom {}", .field.1, atom_name.1)]
     ProductUnknownAtomField {
         atom_name: Identifier,
         field: Identifier,
@@ -107,6 +107,13 @@ pub enum Error {
     InvalidAtomFieldIndex {
         field_name: Identifier,
         atom_name: Identifier,
+    },
+
+    #[error("Duplicate parameter {} on extern function {}", .duplicate_param.1, .ext_name.1)]
+    ExternDuplicateParameterName {
+        ext_name: Identifier,
+        duplicate_param: Identifier,
+        original_param: Identifier,
     },
 }
 
@@ -174,6 +181,8 @@ impl Translator<'_> {
         self.setup_atoms(files);
 
         self.setup_enzymes(&enzymes);
+
+        self.setup_externs(files);
     }
 
     fn setup_atoms(&mut self, files: &[ast::File]) {
@@ -356,6 +365,59 @@ impl Translator<'_> {
             let hir_e = &mut self.prog.enzymes[*id];
             hir_e.binds = binds;
             hir_e.products = products;
+        }
+    }
+
+    fn setup_externs(&mut self, files: &[ast::File]) {
+        let mut fields = BTreeMap::<&str, Identifier>::new();
+
+        for file in files {
+            for ext in &file.externs {
+                fields.clear();
+
+                let mut hir_ext = Extern {
+                    name: ext.name.clone(),
+                    parameters: vec![],
+                    parameter_names: vec![],
+                };
+
+                for (name, ty) in &ext.parameters {
+                    let ast::Type::Named(type_name) = ty;
+
+                    let ty_id = if let Some(id) = self.prog.type_by_name(&type_name.1) {
+                        id
+                    } else {
+                        self.add_error(Error::UnknownType {
+                            name: type_name.clone(),
+                        });
+                        continue;
+                    };
+
+                    if let Some(prev) = fields.insert(name.1.as_str(), name.clone()) {
+                        self.add_error(Error::ExternDuplicateParameterName {
+                            ext_name: ext.name.clone(),
+                            duplicate_param: name.clone(),
+                            original_param: prev,
+                        });
+                        continue;
+                    }
+
+                    hir_ext.parameter_names.push(name.clone());
+                    hir_ext.parameters.push(ty_id);
+                }
+
+                if self.prog.add_extern(ext.fc, hir_ext).is_none() {
+                    let redef_id = self.prog.extern_by_name(&ext.name.1).unwrap();
+                    let redef_ext = &self.prog[redef_id];
+
+                    let err = Error::RedefinedItem {
+                        orig_name: redef_ext.name.clone(),
+                        redef_name: ext.name.clone(),
+                    };
+                    self.add_error(err);
+                    continue;
+                }
+            }
         }
     }
 

@@ -1,0 +1,15 @@
+extern print_line(s: string)
+
+extern print_line(s: string)
+
+// args: --no-colour
+
+// expected stderr:
+// error: redefined item `print_line`
+//   ┌─ ../tests/fail/semantic/extern_redefined.cyt:3:8
+//   │
+// 1 │ extern print_line(s: string)
+//   │        ---------- first definition of item `print_line` here
+// 2 │ 
+// 3 │ extern print_line(s: string)
+//   │        ^^^^^^^^^^ redefined item `print_line` here

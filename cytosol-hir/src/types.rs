@@ -62,6 +62,7 @@ pub type ExternId = Id<Extern>;
 #[derive(Debug)]
 pub struct Extern {
     pub name: Identifier,
+    pub parameter_names: Vec<Identifier>,
     pub parameters: Vec<TypeId>,
 }
 

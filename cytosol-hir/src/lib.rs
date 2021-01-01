@@ -141,7 +141,11 @@ impl Program {
             std::collections::hash_map::Entry::Vacant(entry) => {
                 let id = self.exts.alloc(val);
                 let _ = entry.insert(id);
-                self.exts_fc.insert(id, fc).unwrap();
+                let overwritten = self.exts_fc.insert(id, fc).is_some();
+                debug_assert_eq!(
+                    overwritten, false,
+                    "FC should only be inserted for a fresh ExternId"
+                );
                 Some(id)
             }
         }
