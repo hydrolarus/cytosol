@@ -3,6 +3,7 @@ members = [
     "cytosol-syntax",
     "cytosol-parser",
     "cytosol-hir",
+    "cytosol-runtime",
 
     "cytosol",
     "cytosol-tester",

@@ -8,30 +8,32 @@ pub mod types;
 
 use types::*;
 
+pub use cytosol_syntax as ast;
+
 pub struct Program {
-    pub(crate) types: Arena<Type>,
-    pub(crate) types_by_name: HashMap<String, TypeId>,
-    pub(crate) exts: Arena<Extern>,
-    pub(crate) exts_by_name: HashMap<String, ExternId>,
-    pub(crate) exts_fc: HashMap<ExternId, FC>,
-    pub(crate) atoms: Arena<Atom>,
-    pub(crate) atoms_by_name: HashMap<String, AtomId>,
-    pub(crate) atoms_fc: HashMap<AtomId, FC>,
+    pub types: Arena<Type>,
+    pub types_by_name: HashMap<String, TypeId>,
+    pub exts: Arena<Extern>,
+    pub exts_by_name: HashMap<String, ExternId>,
+    pub exts_fc: HashMap<ExternId, FC>,
+    pub atoms: Arena<Atom>,
+    pub atoms_by_name: HashMap<String, AtomId>,
+    pub atoms_fc: HashMap<AtomId, FC>,
 
-    pub(crate) enzymes: Arena<Enzyme>,
-    pub(crate) enzymes_by_name: HashMap<String, EnzymeId>,
-    pub(crate) enzymes_fc: HashMap<EnzymeId, FC>,
-    pub(crate) genes: Arena<Gene>,
-    pub(crate) genes_fc: HashMap<GeneId, FC>,
-    pub(crate) gene_stmts: Arena<GeneStatement>,
-    pub(crate) gene_stmts_fc: HashMap<GeneStatementId, FC>,
+    pub enzymes: Arena<Enzyme>,
+    pub enzymes_by_name: HashMap<String, EnzymeId>,
+    pub enzymes_fc: HashMap<EnzymeId, FC>,
+    pub genes: Arena<Gene>,
+    pub genes_fc: HashMap<GeneId, FC>,
+    pub gene_stmts: Arena<GeneStatement>,
+    pub gene_stmts_fc: HashMap<GeneStatementId, FC>,
 
-    pub(crate) exprs: Arena<Expression>,
-    pub(crate) exprs_fc: HashMap<ExpressionId, FC>,
-    pub(crate) exprs_type: HashMap<ExpressionId, TypeId>,
+    pub exprs: Arena<Expression>,
+    pub exprs_fc: HashMap<ExpressionId, FC>,
+    pub exprs_type: HashMap<ExpressionId, TypeId>,
 
-    pub(crate) type_int_id: TypeId,
-    pub(crate) type_string_id: TypeId,
+    pub type_int_id: TypeId,
+    pub type_string_id: TypeId,
 }
 
 impl Default for Program {
