@@ -1,0 +1,10 @@
+record Test(x: int, y: huh)
+
+// args: --no-colour
+
+// expected stderr:
+// error: unknown type `huh`
+//   ┌─ ../tests/fail/semantic/unknown_type_record_field.cyt:1:24
+//   │
+// 1 │ record Test(x: int, y: huh)
+//   │                        ^^^ unknown type

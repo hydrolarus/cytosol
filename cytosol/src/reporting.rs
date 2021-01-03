@@ -135,14 +135,14 @@ pub(crate) fn report_hir_translate_errors<'a>(
                     .with_message(diag_message)
                     .with_labels(labels)
             }
-            Error::DuplicateAtomField {
-                atom_name,
+            Error::DuplicateRecordField {
+                record_name,
                 field_name,
                 first_occurance,
             } => {
                 let message = format!(
-                    "duplicated atom field `{}` in atom `{}`",
-                    field_name.1, atom_name.1
+                    "duplicated record field `{}` in record `{}`",
+                    field_name.1, record_name.1
                 );
                 let labels = vec![
                     Label::primary(field_name.0.file, field_name.0.range())
@@ -154,11 +154,11 @@ pub(crate) fn report_hir_translate_errors<'a>(
                     .with_message(message)
                     .with_labels(labels)
             }
-            Error::RecursiveAtomDefinitions { defs } => {
+            Error::RecursiveRecordDefinitions { defs } => {
                 let message = if defs.len() > 1 {
-                    "recursive atom types"
+                    "recursive record types"
                 } else {
-                    "recursive atom type"
+                    "recursive record type"
                 };
 
                 let mut defs = defs.clone();
@@ -175,9 +175,9 @@ pub(crate) fn report_hir_translate_errors<'a>(
                         };
 
                         let message = if i == 0 {
-                            "atom has infinite size"
+                            "record has infinite size"
                         } else {
-                            "atom is part of a recursive cycle"
+                            "record is part of a recursive cycle"
                         };
 
                         Label::new(style, fc.file, fc.range()).with_message(message)
@@ -386,14 +386,14 @@ pub(crate) fn report_hir_translate_errors<'a>(
                     .with_labels(vec![label])
                     .with_notes(vec![format!("try using `{}` without any fields", name.1)])
             }
-            Error::ProductMissingAtomField {
-                atom_name,
+            Error::ProductMissingRecordField {
+                record_name,
                 product_fc,
                 missing_field,
             } => {
                 let message = format!(
                     "product `{}` is missing a `{}` field",
-                    atom_name.1, missing_field.1
+                    record_name.1, missing_field.1
                 );
 
                 let labels = vec![
@@ -407,14 +407,14 @@ pub(crate) fn report_hir_translate_errors<'a>(
                     .with_message(message)
                     .with_labels(labels)
             }
-            Error::ProductDuplicateAtomField {
-                atom_name,
+            Error::ProductDuplicateRecordField {
+                record_name,
                 duplicate_field,
                 original_field,
             } => {
                 let message = format!(
-                    "duplicated field `{}` on atom `{}`",
-                    duplicate_field.1, atom_name.1
+                    "duplicated field `{}` on record `{}`",
+                    duplicate_field.1, record_name.1
                 );
 
                 let labels = vec![
@@ -428,13 +428,13 @@ pub(crate) fn report_hir_translate_errors<'a>(
                     .with_message(message)
                     .with_labels(labels)
             }
-            Error::ProductUnknownAtomField { atom_name, field } => {
-                let message = format!("unknown field `{}` on atom `{}`", field.1, atom_name.1);
+            Error::ProductUnknownRecordField { record_name, field } => {
+                let message = format!("unknown field `{}` on record `{}`", field.1, record_name.1);
 
                 let labels = vec![
                     Label::primary(field.0.file, field.0.range()).with_message("unknown field"),
-                    Label::secondary(atom_name.0.file, atom_name.0.range())
-                        .with_message("no such field in the definition of the atom"),
+                    Label::secondary(record_name.0.file, record_name.0.range())
+                        .with_message("no such field in the definition of the record"),
                 ];
 
                 Diagnostic::error()
@@ -452,23 +452,23 @@ pub(crate) fn report_hir_translate_errors<'a>(
                     .with_message(message)
                     .with_labels(vec![label])
             }
-            Error::FieldIndexOnNonAtom {
+            Error::FieldIndexOnNonRecord {
                 field_name,
                 base_type,
             } => {
                 let (type_name, type_fc) = prog.type_name(*base_type).unwrap();
 
                 let message = format!(
-                    "tried to access field `{}` on non-atom type `{}`",
+                    "tried to access field `{}` on non-record type `{}`",
                     field_name.1, type_name,
                 );
 
                 let mut labels = vec![Label::primary(field_name.0.file, field_name.0.range())
-                    .with_message(format!("no such field on non-atom type `{}`", type_name))];
+                    .with_message(format!("no such field on non-record type `{}`", type_name))];
 
                 if let Some(fc) = type_fc {
                     labels.push(Label::secondary(fc.file, fc.range()).with_message(format!(
-                        "this non-atom type does not have the field `{}`",
+                        "this non-record type does not have the field `{}`",
                         field_name.1
                     )));
                 }
@@ -477,20 +477,20 @@ pub(crate) fn report_hir_translate_errors<'a>(
                     .with_message(message)
                     .with_labels(labels)
             }
-            Error::InvalidAtomFieldIndex {
+            Error::InvalidRecordFieldIndex {
                 field_name,
-                atom_name,
+                record_name,
             } => {
                 let message = format!(
-                    "invalid field `{}` on atom type `{}`",
-                    field_name.1, atom_name.1
+                    "invalid field `{}` on record type `{}`",
+                    field_name.1, record_name.1
                 );
 
                 let labels = vec![
                     Label::primary(field_name.0.file, field_name.0.range())
-                        .with_message(format!("no such field on type `{}`", atom_name.1)),
-                    Label::secondary(atom_name.0.file, atom_name.0.range())
-                        .with_message("field not present in this atom"),
+                        .with_message(format!("no such field on type `{}`", record_name.1)),
+                    Label::secondary(record_name.0.file, record_name.0.range())
+                        .with_message("field not present in this record"),
                 ];
 
                 Diagnostic::error()

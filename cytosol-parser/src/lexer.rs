@@ -8,8 +8,8 @@ pub struct Token<'src> {
 
 #[derive(Debug, Logos, PartialEq, Eq)]
 pub enum TokenKind<'src> {
-    #[token("atom")]
-    Atom,
+    #[token("record")]
+    Record,
 
     #[token("gene")]
     Gene,

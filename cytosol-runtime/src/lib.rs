@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use cytosol_hir as hir;
 
-pub type AtomFields = Vec<Value>;
+pub type RecordFields = Vec<Value>;
 type ExtFunc = Box<dyn for<'a> FnMut(&'a [Value])>;
 
 pub struct ProgramInstance {
@@ -32,7 +32,7 @@ impl ProgramInstance {
 pub enum Value {
     Integer(isize),
     String(String),
-    Atom(AtomFields),
+    Record(RecordFields),
     Enzyme,
 }
 
@@ -81,7 +81,7 @@ impl<'a> FromValue<'a> for String {
 
 impl<'a> FromValue<'a> for Vec<Value> {
     fn from_value(val: &'a Value) -> Vec<Value> {
-        if let Value::Atom(fields) = val {
+        if let Value::Record(fields) = val {
             fields.clone()
         } else {
             panic!("`&[Value]::from_value()` on unexpected value {:?}", val)
@@ -97,7 +97,7 @@ macro_rules! from_value_tuple {
         {
             #[allow(dead_code, unused_assignments)]
             fn from_value(val: &'a Value) -> ($($t,)*) {
-                if let Value::Atom(fields) = val {
+                if let Value::Record(fields) = val {
                     let mut i = 0;
 
                     (

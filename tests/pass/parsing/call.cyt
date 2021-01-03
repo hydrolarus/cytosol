@@ -1,6 +1,6 @@
 extern print_line(s: string)
 
-atom Start
+record Start
 
 gene [Start]
 {
@@ -11,10 +11,10 @@ gene [Start]
 
 // expected stderr:
 // (file
-//     ((atom Start ()))
+//     ((record Start ()))
 //     (
 //         (gene
-//             ((atom Start))
+//             ((record Start))
 //             ((call print_line ((s "Hello!"))))))
 //     ()
 //     ((extern print_line ((s string)))))

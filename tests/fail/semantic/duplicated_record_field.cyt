@@ -1,0 +1,25 @@
+record Test(a: int, a: int)
+
+record Test2(
+    x: int,
+    x: int,
+)
+
+// args: --no-colour
+
+// expected stderr:
+// error: duplicated record field `a` in record `Test`
+//   ┌─ ../tests/fail/semantic/duplicated_record_field.cyt:1:21
+//   │
+// 1 │ record Test(a: int, a: int)
+//   │             -       ^ duplicate field
+//   │             │        
+//   │             first occurance of field name
+// 
+// error: duplicated record field `x` in record `Test2`
+//   ┌─ ../tests/fail/semantic/duplicated_record_field.cyt:5:5
+//   │
+// 4 │     x: int,
+//   │     - first occurance of field name
+// 5 │     x: int,
+//   │     ^ duplicate field

@@ -1,4 +1,4 @@
-atom Test(value: int)
+record Test(value: int)
 
 enzyme WrongType[] -> Test(value: "hello")
 

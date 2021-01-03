@@ -1,8 +1,8 @@
 use thiserror::Error;
 
 use cytosol_syntax::{
-    Atom, AtomBinding, AtomBindingAttribute, Enzyme, Expression, Extern, File, FileId, Gene,
-    GeneStatement, HasFC, Identifier, InfixOperator, Literal, PrefixOperator, Product, Type, FC,
+    Binding, BindingAttribute, Enzyme, Expression, Extern, File, FileId, Gene, GeneStatement,
+    HasFC, Identifier, InfixOperator, Literal, PrefixOperator, Product, Record, Type, FC,
 };
 
 use crate::{lexer::TokenKind, Token};
@@ -72,11 +72,11 @@ impl<'src> Parser<'src> {
 
         while let Some(t) = self.peek() {
             match t.kind {
-                TokenKind::Atom => {
+                TokenKind::Record => {
                     let start_tok = self.next().unwrap();
                     let ec = CTX
-                        .start(start_tok.fc, "atom definition")
-                        .while_parsing("an atom definition");
+                        .start(start_tok.fc, "record definition")
+                        .while_parsing("a record definition");
 
                     let name = self.parse_identifier(ec)?;
 
@@ -84,17 +84,17 @@ impl<'src> Parser<'src> {
                         self.grouped_separated(
                             (TokenKind::ParenOpen, TokenKind::ParenClose),
                             ec.start(t.fc, "field list")
-                                .while_parsing("the field list of an atom item")
+                                .while_parsing("the field list of a record item")
                                 .expected("`(`"),
                             TokenKind::Comma,
                             ec.start(t.fc, "field list")
-                                .while_parsing("the field list of an atom item")
+                                .while_parsing("the field list of a record item")
                                 .expected("`,` or `)`"),
                             |s| {
                                 let ident =
-                                    s.parse_identifier(ec.while_parsing("an atom field"))?;
+                                    s.parse_identifier(ec.while_parsing("a record field"))?;
                                 let (colon_fc, _) = s.expect_tok_and_fc(
-                                    ec.while_parsing("an atom field").expected("`:`"),
+                                    ec.while_parsing("a record field").expected("`:`"),
                                     |t| matches!(t.kind, TokenKind::Colon),
                                 )?;
                                 let ty = s.parse_type(ec.start(colon_fc, "beginning of type"))?;
@@ -105,7 +105,7 @@ impl<'src> Parser<'src> {
                         (name.fc(), vec![])
                     };
 
-                    file.atoms.push(Atom {
+                    file.records.push(Record {
                         fc: start_tok.fc.merge(fc),
                         name,
                         fields,
@@ -158,7 +158,7 @@ impl<'src> Parser<'src> {
                         TokenKind::Comma,
                         ec.while_parsing("a gene factor list")
                             .expected("`,` or `]`"),
-                        |s| s.parse_atom_binding(ec),
+                        |s| s.parse_binding(ec),
                     )?;
 
                     let (end_fc, stmts) = self.grouped(
@@ -189,7 +189,7 @@ impl<'src> Parser<'src> {
                         TokenKind::Comma,
                         ec.while_parsing("an enzyme reactant list")
                             .expected("`,` or `]`"),
-                        |s| s.parse_atom_binding(ec),
+                        |s| s.parse_binding(ec),
                     )?;
 
                     self.expect(
@@ -212,7 +212,7 @@ impl<'src> Parser<'src> {
                     return Err(Error::UnexpectedToken(
                         t.fc,
                         CTX.while_parsing("a top level item")
-                            .expected("`atom`, `gene`, `enzyme` or `extern`"),
+                            .expected("`record`, `gene`, `enzyme` or `extern`"),
                     ))
                 }
             }
@@ -296,23 +296,23 @@ impl<'src> Parser<'src> {
         )
     }
 
-    fn parse_atom_binding(&mut self, pec: ErrorContext) -> Result<AtomBinding> {
-        let ec = pec.while_parsing("an atom binding");
+    fn parse_binding(&mut self, pec: ErrorContext) -> Result<Binding> {
+        let ec = pec.while_parsing("a binding");
 
         let next = self.peek().ok_or_else(|| {
             Error::UnexpectedEnd(self.file, ec.expected("a quantity or identifier"))
         })?;
 
-        let ec = ec.start(next.fc, "atom binding");
+        let ec = ec.start(next.fc, "binding");
 
         match &next.kind {
             TokenKind::IntegerLiteral(n) => {
                 let _ = self.next();
-                let attr = AtomBindingAttribute::Quantity(next.fc, *n);
+                let attr = BindingAttribute::Quantity(next.fc, *n);
 
                 let name = self.parse_identifier(ec)?;
 
-                Ok(AtomBinding {
+                Ok(Binding {
                     fc: next.fc.merge(name.fc()),
                     name,
                     attr: Some(attr),
@@ -327,20 +327,20 @@ impl<'src> Parser<'src> {
 
                         let name = self.parse_identifier(ec)?;
 
-                        Ok(AtomBinding {
+                        Ok(Binding {
                             fc: id.fc().merge(name.fc()),
                             name,
-                            attr: Some(AtomBindingAttribute::Name(id)),
+                            attr: Some(BindingAttribute::Name(id)),
                         })
                     } else {
-                        Ok(AtomBinding {
+                        Ok(Binding {
                             fc: id.fc(),
                             name: id,
                             attr: None,
                         })
                     }
                 } else {
-                    Ok(AtomBinding {
+                    Ok(Binding {
                         fc: id.fc(),
                         name: id,
                         attr: None,
@@ -349,7 +349,7 @@ impl<'src> Parser<'src> {
             }
             _ => Err(Error::UnexpectedToken(
                 next.fc,
-                pec.while_parsing("an atom binding")
+                pec.while_parsing("a record binding")
                     .expected("a quantity or identifier"),
             )),
         }
@@ -429,7 +429,7 @@ impl<'src> Parser<'src> {
     }
 
     fn parse_expression(&mut self, pec: ErrorContext) -> Result<Expression> {
-        let mut expr = self.parse_expression_atom(pec)?;
+        let mut expr = self.parse_expression_record(pec)?;
 
         while let Some(next) = self.peek() {
             let op = match next.kind {
@@ -440,7 +440,7 @@ impl<'src> Parser<'src> {
 
             let _ = self.next();
 
-            let rhs = self.parse_expression_atom(pec)?;
+            let rhs = self.parse_expression_record(pec)?;
 
             expr = Expression::InfixOp {
                 op,
@@ -451,9 +451,9 @@ impl<'src> Parser<'src> {
         Ok(expr)
     }
 
-    fn parse_expression_atom(&mut self, pec: ErrorContext) -> Result<Expression> {
+    fn parse_expression_record(&mut self, pec: ErrorContext) -> Result<Expression> {
         let next = self.peek().ok_or_else(|| {
-            Error::UnexpectedEnd(self.file, pec.while_parsing("an expression atom"))
+            Error::UnexpectedEnd(self.file, pec.while_parsing("an expression record"))
         })?;
 
         let mut expr = match &next.kind {
@@ -480,7 +480,7 @@ impl<'src> Parser<'src> {
             }
             TokenKind::OpMinus => {
                 let t = self.next().unwrap();
-                let rhs = self.parse_expression_atom(pec)?;
+                let rhs = self.parse_expression_record(pec)?;
                 Expression::PrefixOp {
                     op: (t.fc, PrefixOperator::Neg),
                     expr: Box::new(rhs),
@@ -489,7 +489,7 @@ impl<'src> Parser<'src> {
             _ => {
                 return Err(Error::UnexpectedToken(
                     next.fc,
-                    pec.while_parsing("an expression atom"),
+                    pec.while_parsing("an expression record"),
                 ))
             }
         };

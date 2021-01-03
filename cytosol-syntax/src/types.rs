@@ -10,7 +10,7 @@ pub struct FC {
 
 #[derive(Debug, Default, Clone)]
 pub struct File {
-    pub atoms: Vec<Atom>,
+    pub records: Vec<Record>,
     pub genes: Vec<Gene>,
     pub enzymes: Vec<Enzyme>,
     pub externs: Vec<Extern>,
@@ -20,7 +20,7 @@ pub struct File {
 pub struct Identifier(pub FC, pub String);
 
 #[derive(Debug, Clone)]
-pub struct Atom {
+pub struct Record {
     pub fc: FC,
     pub name: Identifier,
     pub fields: Vec<(Identifier, Type)>,
@@ -34,15 +34,15 @@ pub struct Extern {
 }
 
 #[derive(Debug, Clone)]
-pub enum AtomBindingAttribute {
+pub enum BindingAttribute {
     Quantity(FC, usize),
     Name(Identifier),
 }
 
 #[derive(Debug, Clone)]
-pub struct AtomBinding {
+pub struct Binding {
     pub fc: FC,
-    pub attr: Option<AtomBindingAttribute>,
+    pub attr: Option<BindingAttribute>,
     pub name: Identifier,
 }
 
@@ -54,7 +54,7 @@ pub enum Type {
 #[derive(Debug, Clone)]
 pub struct Gene {
     pub fc: FC,
-    pub factors: Vec<AtomBinding>,
+    pub factors: Vec<Binding>,
     pub body: Vec<GeneStatement>,
 }
 
@@ -62,7 +62,7 @@ pub struct Gene {
 pub struct Enzyme {
     pub fc: FC,
     pub name: Identifier,
-    pub reactants: Vec<AtomBinding>,
+    pub reactants: Vec<Binding>,
     pub products: Vec<Product>,
 }
 

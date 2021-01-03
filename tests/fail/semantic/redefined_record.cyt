@@ -1,0 +1,15 @@
+record Test
+
+record Test(a: int)
+
+// args: --no-colour
+
+// expected stderr:
+// error: redefined item `Test`
+//   ┌─ ../tests/fail/semantic/redefined_record.cyt:3:8
+//   │
+// 1 │ record Test
+//   │        ---- first definition of item `Test` here
+// 2 │ 
+// 3 │ record Test(a: int)
+//   │        ^^^^ redefined item `Test` here

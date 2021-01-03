@@ -1,4 +1,4 @@
-atom Value(val: int)
+record Value(val: int)
 
 enzyme UndefinedVariable[a: Value] -> Value(val: b.val)
 

@@ -1,11 +1,11 @@
-atom Person(name: string)
+record Person(name: string)
 
 enzyme DuplicateField[] -> Person(name: "a", name: "b")
 
 // args: --no-colour
 
 // expected stderr:
-// error: duplicated field `name` on atom `Person`
+// error: duplicated field `name` on record `Person`
 //   ┌─ ../tests/fail/semantic/product_duplicate_field.cyt:3:46
 //   │
 // 3 │ enzyme DuplicateField[] -> Person(name: "a", name: "b")

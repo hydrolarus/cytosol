@@ -3,8 +3,8 @@ use pretty::RcDoc as Doc;
 use cytosol::{
     parser::Token,
     syntax::{
-        Atom, AtomBinding, AtomBindingAttribute, Enzyme, Expression, Extern, File, Gene,
-        GeneStatement, Identifier, InfixOperator, Literal, PrefixOperator, Product, Type,
+        Binding, BindingAttribute, Enzyme, Expression, Extern, File, Gene, GeneStatement,
+        Identifier, InfixOperator, Literal, PrefixOperator, Product, Record, Type,
     },
 };
 
@@ -51,7 +51,7 @@ impl ToDoc for File {
         Doc::text("(file")
             .append(
                 Doc::line()
-                    .append(self.atoms.to_doc())
+                    .append(self.records.to_doc())
                     .append(Doc::hardline())
                     .append(self.genes.to_doc())
                     .append(Doc::hardline())
@@ -84,9 +84,9 @@ impl ToDoc for Extern {
     }
 }
 
-impl ToDoc for Atom {
+impl ToDoc for Record {
     fn to_doc(&self) -> Doc {
-        Doc::text("(atom")
+        Doc::text("(record")
             .append(
                 Doc::line()
                     .append(self.name.to_doc())
@@ -99,15 +99,15 @@ impl ToDoc for Atom {
     }
 }
 
-impl ToDoc for AtomBinding {
+impl ToDoc for Binding {
     fn to_doc(&self) -> Doc {
         let attr = match &self.attr {
-            Some(AtomBindingAttribute::Name(n)) => n.to_doc().append(Doc::space()),
-            Some(AtomBindingAttribute::Quantity(_, n)) => Doc::as_string(n).append(Doc::space()),
+            Some(BindingAttribute::Name(n)) => n.to_doc().append(Doc::space()),
+            Some(BindingAttribute::Quantity(_, n)) => Doc::as_string(n).append(Doc::space()),
             None => Doc::nil(),
         };
 
-        Doc::text("(atom ")
+        Doc::text("(record ")
             .append(attr)
             .append(self.name.to_doc())
             .append(Doc::text(")"))

@@ -1,16 +1,16 @@
-atom Value(x: int, y: int)
-atom Result(res: int)
+record Value(x: int, y: int)
+record Result(res: int)
 
 enzyme InvalidFieldAccess[a: Value] -> Result(res: a.z)
 
 // args: --no-colour
 
 // expected stderr:
-// error: invalid field `z` on atom type `Value`
+// error: invalid field `z` on record type `Value`
 //   ┌─ ../tests/fail/semantic/product_invalid_field_access.cyt:4:54
 //   │
-// 1 │ atom Value(x: int, y: int)
-//   │      ----- field not present in this atom
+// 1 │ record Value(x: int, y: int)
+//   │        ----- field not present in this record
 //   ·
 // 4 │ enzyme InvalidFieldAccess[a: Value] -> Result(res: a.z)
 //   │                                                      ^ no such field on type `Value`

@@ -1,0 +1,24 @@
+enzyme Test[] -> nothing
+record Value(field: int)
+
+enzyme IndexOnNonRecord[a: Test, b: Value] -> Value(field: a.field)
+
+enzyme IndexOnInt[a: Value] -> Value(field: a.field.field)
+
+// args: --no-colour
+
+// expected stderr:
+// error: tried to access field `field` on non-record type `Test`
+//   ┌─ ../tests/fail/semantic/product_field_index_on_non_record.cyt:4:62
+//   │
+// 1 │ enzyme Test[] -> nothing
+//   │        ---- this non-record type does not have the field `field`
+//   ·
+// 4 │ enzyme IndexOnNonRecord[a: Test, b: Value] -> Value(field: a.field)
+//   │                                                              ^^^^^ no such field on non-record type `Test`
+// 
+// error: tried to access field `field` on non-record type `int`
+//   ┌─ ../tests/fail/semantic/product_field_index_on_non_record.cyt:6:53
+//   │
+// 6 │ enzyme IndexOnInt[a: Value] -> Value(field: a.field.field)
+//   │                                                     ^^^^^ no such field on non-record type `int`

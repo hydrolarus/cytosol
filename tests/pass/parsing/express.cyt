@@ -1,6 +1,6 @@
-atom A
-atom B(x: int, y: string)
-atom C(n: int)
+record A
+record B(x: int, y: string)
+record C(n: int)
 
 gene []
 {
@@ -13,7 +13,7 @@ gene []
 
 // expected stderr:
 // (file
-//     ((atom A ()) (atom B ((x int) (y string))) (atom C ((n int))))
+//     ((record A ()) (record B ((x int) (y string))) (record C ((n int))))
 //     (
 //         (gene
 //             ()

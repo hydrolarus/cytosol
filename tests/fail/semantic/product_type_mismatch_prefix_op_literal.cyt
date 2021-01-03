@@ -1,4 +1,4 @@
-atom Result(x: string)
+record Result(x: string)
 
 enzyme InvalidPrefixOp[] -> Result(x: -"test")
 

@@ -18,15 +18,15 @@ pub enum Error {
     #[error("Builtin type {} was redefined", .redef_name.1)]
     RedefinedBuiltinType { redef_name: Identifier },
 
-    #[error("Atom {} has duplicated field {}", .atom_name.1, .field_name.1)]
-    DuplicateAtomField {
-        atom_name: ast::Identifier,
+    #[error("Record {} has duplicated field {}", .record_name.1, .field_name.1)]
+    DuplicateRecordField {
+        record_name: ast::Identifier,
         field_name: ast::Identifier,
         first_occurance: FC,
     },
 
-    #[error("Recursive atom definitions")]
-    RecursiveAtomDefinitions { defs: Vec<FC> },
+    #[error("Recursive record definitions")]
+    RecursiveRecordDefinitions { defs: Vec<FC> },
 
     #[error("Name {} rebound", .name.1)]
     NameRebound {
@@ -78,22 +78,22 @@ pub enum Error {
     ProductEnzymeWithField { fc: FC, name: Identifier },
 
     #[error("Product is missing the {} field", .missing_field.1)]
-    ProductMissingAtomField {
-        atom_name: Identifier,
+    ProductMissingRecordField {
+        record_name: Identifier,
         product_fc: FC,
         missing_field: Identifier,
     },
 
-    #[error("Duplicated field {} on atom {}", .duplicate_field.1, .atom_name.1)]
-    ProductDuplicateAtomField {
-        atom_name: Identifier,
+    #[error("Duplicated field {} on record {}", .duplicate_field.1, .record_name.1)]
+    ProductDuplicateRecordField {
+        record_name: Identifier,
         duplicate_field: Identifier,
         original_field: Identifier,
     },
 
-    #[error("Unknown field {} on atom {}", .field.1, atom_name.1)]
-    ProductUnknownAtomField {
-        atom_name: Identifier,
+    #[error("Unknown field {} on record {}", .field.1, record_name.1)]
+    ProductUnknownRecordField {
+        record_name: Identifier,
         field: Identifier,
     },
 
@@ -103,16 +103,16 @@ pub enum Error {
         in_scope: Vec<Identifier>,
     },
 
-    #[error("Field index `.{}` on non atom type", .field_name.1)]
-    FieldIndexOnNonAtom {
+    #[error("Field index `.{}` on non record type", .field_name.1)]
+    FieldIndexOnNonRecord {
         field_name: Identifier,
         base_type: TypeId,
     },
 
-    #[error("Invalid field index `.{}` on type {}", .field_name.1, .atom_name.1)]
-    InvalidAtomFieldIndex {
+    #[error("Invalid field index `.{}` on type {}", .field_name.1, .record_name.1)]
+    InvalidRecordFieldIndex {
         field_name: Identifier,
-        atom_name: Identifier,
+        record_name: Identifier,
     },
 
     #[error("Duplicate parameter {} on extern function {}", .duplicate_param.1, .ext_name.1)]
@@ -204,7 +204,7 @@ impl Translator<'_> {
             }
         }
 
-        self.setup_atoms(files);
+        self.setup_records(files);
 
         self.setup_enzymes(&enzymes);
 
@@ -213,39 +213,39 @@ impl Translator<'_> {
         self.setup_genes(files);
     }
 
-    fn setup_atoms(&mut self, files: &[ast::File]) {
+    fn setup_records(&mut self, files: &[ast::File]) {
         // sort by dependency
         // Because there are currently no optional types, so recursive
         // types are not allowed.
         let mut name_to_edge = HashMap::new();
         let mut name_to_fc = HashMap::new();
 
-        type AtomIdx = (usize, usize);
+        type RecordIdx = (usize, usize);
 
-        let mut g = petgraph::Graph::<AtomIdx, AtomIdx>::new();
+        let mut g = petgraph::Graph::<RecordIdx, RecordIdx>::new();
 
         // generate all indices first
         for (f, file) in files.iter().enumerate() {
-            for (a, atom) in file.atoms.iter().enumerate() {
-                if let Some(prev) = name_to_fc.insert(&atom.name.1, &atom.name) {
+            for (a, record) in file.records.iter().enumerate() {
+                if let Some(prev) = name_to_fc.insert(&record.name.1, &record.name) {
                     self.add_error(Error::RedefinedItem {
                         orig_name: prev.clone(),
-                        redef_name: atom.name.clone(),
+                        redef_name: record.name.clone(),
                     });
                     continue;
                 }
 
                 let edge = g.add_node((f, a));
-                name_to_edge.insert(atom.name.1.clone(), edge);
+                name_to_edge.insert(record.name.1.clone(), edge);
             }
         }
 
         // add all edges
         for file in files {
-            for atom in &file.atoms {
-                let self_id = &name_to_edge[&atom.name.1];
+            for record in &file.records {
+                let self_id = &name_to_edge[&record.name.1];
 
-                let edges = atom
+                let edges = record
                     .fields
                     .iter()
                     .filter_map(|(_, ast::Type::Named(n))| name_to_edge.get(&n.1))
@@ -259,45 +259,45 @@ impl Translator<'_> {
 
         for group in deps {
             if group.len() > 1 {
-                // found a recursive set of atom definitions ⇒ error
+                // found a recursive set of record definitions ⇒ error
                 let defs: Vec<FC> = group
                     .into_iter()
                     .map(|i| g[i])
-                    .map(|(f, a)| files[f].atoms[a].name.0)
+                    .map(|(f, a)| files[f].records[a].name.0)
                     .collect();
-                self.add_error(Error::RecursiveAtomDefinitions { defs });
+                self.add_error(Error::RecursiveRecordDefinitions { defs });
                 continue;
             }
 
             debug_assert_eq!(group.len(), 1);
 
             let (f, a) = g[group[0]];
-            let atom: &ast::Atom = &files[f].atoms[a];
+            let record: &ast::Record = &files[f].records[a];
 
-            // check if atom depends on itself
-            if atom
+            // check if record depends on itself
+            if record
                 .fields
                 .iter()
-                .any(|(_, ast::Type::Named(n))| n.1 == atom.name.1)
+                .any(|(_, ast::Type::Named(n))| n.1 == record.name.1)
             {
-                self.add_error(Error::RecursiveAtomDefinitions {
-                    defs: vec![atom.name.0],
+                self.add_error(Error::RecursiveRecordDefinitions {
+                    defs: vec![record.name.0],
                 });
                 continue;
             }
 
-            // atom is not self-recursive, nice!
+            // record is not self-recursive, nice!
 
-            let mut hir_atom = Atom {
-                name: atom.name.clone(),
+            let mut hir_record = Record {
+                name: record.name.clone(),
                 field_names: vec![],
                 fields: vec![],
             };
 
-            for (name, ty) in &atom.fields {
-                if let Some(prev) = hir_atom.field_names.iter().find(|f| f.1 == name.1) {
-                    self.add_error(Error::DuplicateAtomField {
-                        atom_name: atom.name.clone(),
+            for (name, ty) in &record.fields {
+                if let Some(prev) = hir_record.field_names.iter().find(|f| f.1 == name.1) {
+                    self.add_error(Error::DuplicateRecordField {
+                        record_name: record.name.clone(),
                         field_name: name.clone(),
                         first_occurance: prev.0,
                     });
@@ -306,34 +306,34 @@ impl Translator<'_> {
                 let ast::Type::Named(n) = ty;
 
                 if let Some(id) = self.prog.type_by_name(&n.1) {
-                    hir_atom.fields.push(id);
-                    hir_atom.field_names.push(name.clone());
+                    hir_record.fields.push(id);
+                    hir_record.field_names.push(name.clone());
                 } else {
                     self.add_error(Error::UnknownType { name: n.clone() });
                 }
             }
 
-            if let Some(id) = self.prog.add_atom(atom.fc, hir_atom) {
-                self.prog.add_type(Type::Atom(id));
+            if let Some(id) = self.prog.add_record(record.fc, hir_record) {
+                self.prog.add_type(Type::Record(id));
             } else {
-                let type_id = self.prog.type_by_name(&atom.name.1).unwrap();
+                let type_id = self.prog.type_by_name(&record.name.1).unwrap();
                 let prev_name = if let Some(n) = self.prog.type_ident(type_id) {
                     n.clone()
                 } else {
                     self.add_error(Error::RedefinedBuiltinType {
-                        redef_name: atom.name.clone(),
+                        redef_name: record.name.clone(),
                     });
                     continue;
                 };
                 self.add_error(Error::RedefinedItem {
                     orig_name: prev_name,
-                    redef_name: atom.name.clone(),
+                    redef_name: record.name.clone(),
                 });
             }
         }
     }
 
-    // NOTE: atoms must be setup first! Otherwise they can't be used as products or
+    // NOTE: records must be setup first! Otherwise they can't be used as products or
     // reactant types
     fn setup_enzymes(&mut self, enzymes: &[(EnzymeId, &ast::Enzyme)]) {
         // after they have all been added their binds are filled
@@ -343,14 +343,14 @@ impl Translator<'_> {
 
             for reactant in &e.reactants {
                 let bind_attr = match &reactant.attr {
-                    Some(ast::AtomBindingAttribute::Quantity(_, n)) => {
+                    Some(ast::BindingAttribute::Quantity(_, n)) => {
                         if *n == 0 {
                             Bind::None
                         } else {
                             Bind::Quantity(*n)
                         }
                     }
-                    Some(ast::AtomBindingAttribute::Name(name)) => {
+                    Some(ast::BindingAttribute::Name(name)) => {
                         let ty = if let Some(ty) = self.prog.type_by_name(&reactant.name.1) {
                             ty
                         } else {
@@ -373,8 +373,8 @@ impl Translator<'_> {
                     None => Bind::Quantity(1),
                 };
 
-                if let Some(atom_id) = self.prog.atom_by_name(&reactant.name.1) {
-                    binds.push((bind_attr, BindType::Atom(atom_id)))
+                if let Some(record_id) = self.prog.record_by_name(&reactant.name.1) {
+                    binds.push((bind_attr, BindType::Record(record_id)))
                 } else if let Some(enz_id) = self.prog.enzyme_by_name(&reactant.name.1) {
                     binds.push((bind_attr, BindType::Enzyme(enz_id)));
                 } else {
@@ -457,14 +457,14 @@ impl Translator<'_> {
 
                 for factor in &gene.factors {
                     let bind_attr = match &factor.attr {
-                        Some(ast::AtomBindingAttribute::Quantity(_, n)) => {
+                        Some(ast::BindingAttribute::Quantity(_, n)) => {
                             if *n == 0 {
                                 Bind::None
                             } else {
                                 Bind::Quantity(*n)
                             }
                         }
-                        Some(ast::AtomBindingAttribute::Name(name)) => {
+                        Some(ast::BindingAttribute::Name(name)) => {
                             let ty = if let Some(ty) = self.prog.type_by_name(&factor.name.1) {
                                 ty
                             } else {
@@ -488,8 +488,8 @@ impl Translator<'_> {
                         None => Bind::Quantity(1),
                     };
 
-                    if let Some(atom_id) = self.prog.atom_by_name(&factor.name.1) {
-                        binds.push((bind_attr, BindType::Atom(atom_id)))
+                    if let Some(record_id) = self.prog.record_by_name(&factor.name.1) {
+                        binds.push((bind_attr, BindType::Record(record_id)))
                     } else if let Some(enz_id) = self.prog.enzyme_by_name(&factor.name.1) {
                         binds.push((bind_attr, BindType::Enzyme(enz_id)));
                     } else {
@@ -529,14 +529,14 @@ impl Translator<'_> {
                 });
                 None
             }
-            Type::Atom(id) => {
+            Type::Record(id) => {
                 use std::collections::btree_map::Entry;
 
                 let mut errs = vec![];
 
                 let id = *id;
 
-                let atom = self.prog[id].clone();
+                let record = self.prog[id].clone();
 
                 // already ordered/sorted by field name
                 let mut args = vec![];
@@ -549,8 +549,8 @@ impl Translator<'_> {
                         }
                         Entry::Occupied(e) => {
                             let (orig_ident, _) = e.get();
-                            errs.push(Error::ProductDuplicateAtomField {
-                                atom_name: atom.name.clone(),
+                            errs.push(Error::ProductDuplicateRecordField {
+                                record_name: record.name.clone(),
                                 duplicate_field: ident.clone(),
                                 original_field: (*orig_ident).clone(),
                             });
@@ -559,7 +559,7 @@ impl Translator<'_> {
                     }
                 }
 
-                for (field_name, field_ty) in atom.field_names.iter().zip(&atom.fields) {
+                for (field_name, field_ty) in record.field_names.iter().zip(&record.fields) {
                     // find the field inside the product call
 
                     if let Some((_, expr)) = call_fields.remove(&field_name.1.as_str()) {
@@ -578,8 +578,8 @@ impl Translator<'_> {
                             continue;
                         }
                     } else {
-                        errs.push(Error::ProductMissingAtomField {
-                            atom_name: atom.name.clone(),
+                        errs.push(Error::ProductMissingRecordField {
+                            record_name: record.name.clone(),
                             product_fc: product.fc,
                             missing_field: field_name.clone(),
                         });
@@ -587,17 +587,17 @@ impl Translator<'_> {
                 }
 
                 for (_, (ident, _)) in call_fields {
-                    errs.push(Error::ProductUnknownAtomField {
-                        atom_name: atom.name.clone(),
+                    errs.push(Error::ProductUnknownRecordField {
+                        record_name: record.name.clone(),
                         field: ident.clone(),
                     });
                 }
 
                 self.errors.extend(errs);
 
-                Some(Product::Atom {
+                Some(Product::Record {
                     quantity: product.quantity.map(|(_, n)| n).unwrap_or(1),
-                    atom: id,
+                    record: id,
                     arguments: args,
                 })
             }
@@ -755,9 +755,9 @@ impl Translator<'_> {
                 let base_type = self.prog.expr_type(base_id)?;
                 let ty = &self.prog[base_type];
                 match ty {
-                    Type::Atom(atom_id) => {
-                        let atom = &self.prog[*atom_id];
-                        if let Some((idx, _)) = atom
+                    Type::Record(record_id) => {
+                        let record = &self.prog[*record_id];
+                        if let Some((idx, _)) = record
                             .field_names
                             .iter()
                             .enumerate()
@@ -767,11 +767,11 @@ impl Translator<'_> {
                                 base: base_id,
                                 field: idx,
                             };
-                            let ty = atom.fields[idx];
+                            let ty = record.fields[idx];
                             (expr, ty)
                         } else {
-                            let err = Error::InvalidAtomFieldIndex {
-                                atom_name: atom.name.clone(),
+                            let err = Error::InvalidRecordFieldIndex {
+                                record_name: record.name.clone(),
                                 field_name: field_name.clone(),
                             };
                             self.add_error(err);
@@ -779,7 +779,7 @@ impl Translator<'_> {
                         }
                     }
                     _ => {
-                        self.errors.push(Error::FieldIndexOnNonAtom {
+                        self.errors.push(Error::FieldIndexOnNonRecord {
                             field_name: field_name.clone(),
                             base_type,
                         });

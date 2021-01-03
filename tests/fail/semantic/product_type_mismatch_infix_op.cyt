@@ -1,4 +1,4 @@
-atom Result(val: int)
+record Result(val: int)
 
 enzyme InvalidInfixOp[] -> Result(val: 12 + "string")
 

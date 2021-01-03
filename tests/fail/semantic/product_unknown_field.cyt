@@ -1,15 +1,15 @@
-atom Person(name: string, age: int)
+record Person(name: string, age: int)
 
 enzyme UnknownField[] -> Person(name: "a", age: 20, address: "example street")
 
 // args: --no-colour
 
 // expected stderr:
-// error: unknown field `address` on atom `Person`
+// error: unknown field `address` on record `Person`
 //   ┌─ ../tests/fail/semantic/product_unknown_field.cyt:3:53
 //   │
-// 1 │ atom Person(name: string, age: int)
-//   │      ------ no such field in the definition of the atom
+// 1 │ record Person(name: string, age: int)
+//   │        ------ no such field in the definition of the record
 // 2 │ 
 // 3 │ enzyme UnknownField[] -> Person(name: "a", age: 20, address: "example street")
 //   │                                                     ^^^^^^^ unknown field

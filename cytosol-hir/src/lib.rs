@@ -16,9 +16,9 @@ pub struct Program {
     pub exts: Arena<Extern>,
     pub exts_by_name: HashMap<String, ExternId>,
     pub exts_fc: HashMap<ExternId, FC>,
-    pub atoms: Arena<Atom>,
-    pub atoms_by_name: HashMap<String, AtomId>,
-    pub atoms_fc: HashMap<AtomId, FC>,
+    pub records: Arena<Record>,
+    pub records_by_name: HashMap<String, RecordId>,
+    pub records_fc: HashMap<RecordId, FC>,
 
     pub enzymes: Arena<Enzyme>,
     pub enzymes_by_name: HashMap<String, EnzymeId>,
@@ -58,9 +58,9 @@ impl Program {
             exts: Default::default(),
             exts_by_name: Default::default(),
             exts_fc: Default::default(),
-            atoms: Default::default(),
-            atoms_by_name: Default::default(),
-            atoms_fc: Default::default(),
+            records: Default::default(),
+            records_by_name: Default::default(),
+            records_fc: Default::default(),
             enzymes: Default::default(),
             enzymes_by_name: Default::default(),
             enzymes_fc: Default::default(),
@@ -79,9 +79,9 @@ impl Program {
 
     pub fn add_type(&mut self, val: Type) -> TypeId {
         match &val {
-            Type::Atom(atom_id) => {
-                let atom = &self[*atom_id];
-                let name = atom.name.1.clone();
+            Type::Record(record_id) => {
+                let record = &self[*record_id];
+                let name = record.name.1.clone();
 
                 match self.types_by_name.entry(name) {
                     std::collections::hash_map::Entry::Occupied(entry) => *entry.get(),
@@ -115,7 +115,7 @@ impl Program {
         match ty {
             Type::Int => None,
             Type::String => None,
-            Type::Atom(id) => self.atom(*id).map(|a| &a.name),
+            Type::Record(id) => self.record(*id).map(|a| &a.name),
             Type::Enzyme(id) => self.enzyme(*id).map(|a| &a.name),
         }
     }
@@ -157,33 +157,33 @@ impl Program {
         self.exts_by_name.get(name).copied()
     }
 
-    pub fn add_atom(&mut self, fc: FC, val: Atom) -> Option<AtomId> {
+    pub fn add_record(&mut self, fc: FC, val: Record) -> Option<RecordId> {
         let name = val.name.1.clone();
 
         if self.type_by_name(&name).is_some() {
             return None;
         }
 
-        match self.atoms_by_name.entry(name) {
+        match self.records_by_name.entry(name) {
             std::collections::hash_map::Entry::Occupied(_) => {
                 dbg!(fc, &val);
                 None
             }
             std::collections::hash_map::Entry::Vacant(entry) => {
-                let id = self.atoms.alloc(val);
+                let id = self.records.alloc(val);
                 let _ = entry.insert(id);
-                let overwritten = self.atoms_fc.insert(id, fc).is_some();
+                let overwritten = self.records_fc.insert(id, fc).is_some();
                 debug_assert_eq!(
                     overwritten, false,
-                    "FC should only be inserted for a fresh AtomId"
+                    "FC should only be inserted for a fresh RecordId"
                 );
                 Some(id)
             }
         }
     }
 
-    pub fn atom_by_name(&self, name: &str) -> Option<AtomId> {
-        self.atoms_by_name.get(name).copied()
+    pub fn record_by_name(&self, name: &str) -> Option<RecordId> {
+        self.records_by_name.get(name).copied()
     }
 
     pub fn add_enzyme(&mut self, fc: FC, val: Enzyme) -> Option<EnzymeId> {
@@ -269,8 +269,8 @@ impl Program {
 
     get_impl!(ext, ExternId, Extern, exts);
     fc_impl!(ext_fc, ExternId, exts_fc);
-    get_impl!(atom, AtomId, Atom, atoms);
-    fc_impl!(atom_fc, AtomId, atoms_fc);
+    get_impl!(record, RecordId, Record, records);
+    fc_impl!(record_fc, RecordId, records_fc);
     get_impl!(enzyme, EnzymeId, Enzyme, enzymes);
     fc_impl!(enzyme_fc, EnzymeId, enzymes_fc);
     get_impl!(gene, GeneId, Gene, genes);
@@ -295,7 +295,7 @@ macro_rules! index_impl {
 
 index_impl!(TypeId, Type, types);
 index_impl!(ExternId, Extern, exts);
-index_impl!(AtomId, Atom, atoms);
+index_impl!(RecordId, Record, records);
 index_impl!(EnzymeId, Enzyme, enzymes);
 index_impl!(GeneId, Gene, genes);
 index_impl!(GeneStatementId, GeneStatement, gene_stmts);

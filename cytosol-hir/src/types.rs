@@ -7,14 +7,14 @@ pub type TypeId = Id<Type>;
 pub enum Type {
     Int,
     String,
-    Atom(AtomId),
+    Record(RecordId),
     Enzyme(EnzymeId),
 }
 
-pub type AtomId = Id<Atom>;
+pub type RecordId = Id<Record>;
 
 #[derive(Debug, Clone)]
-pub struct Atom {
+pub struct Record {
     pub name: Identifier,
     pub field_names: Vec<Identifier>,
     pub fields: Vec<TypeId>,
@@ -28,9 +28,9 @@ pub enum Product {
         quantity: usize,
         enzyme: EnzymeId,
     },
-    Atom {
+    Record {
         quantity: usize,
-        atom: AtomId,
+        record: RecordId,
         arguments: Vec<ExpressionId>,
     },
 }
@@ -44,7 +44,7 @@ pub enum Bind {
 
 #[derive(Debug)]
 pub enum BindType {
-    Atom(AtomId),
+    Record(RecordId),
     Enzyme(EnzymeId),
 }
 

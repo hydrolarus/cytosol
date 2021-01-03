@@ -1,11 +1,8 @@
 use std::{borrow::Borrow, ops::Range};
 
-use crate::{
-    types::{
-        AtomBinding, Enzyme, Expression, Gene, GeneStatement, Identifier, Literal, Product, Type,
-        FC,
-    },
-    Atom,
+use crate::types::{
+    Binding, Enzyme, Expression, Gene, GeneStatement, Identifier, Literal, Product, Record, Type,
+    FC,
 };
 
 impl FC {
@@ -36,13 +33,13 @@ impl HasFC for Identifier {
     }
 }
 
-impl HasFC for Atom {
+impl HasFC for Record {
     fn fc(&self) -> FC {
         self.fc
     }
 }
 
-impl HasFC for AtomBinding {
+impl HasFC for Binding {
     fn fc(&self) -> FC {
         self.fc
     }

@@ -14,13 +14,13 @@ gene [1 A, 12 C, n: B] // trailing comma
 //     ()
 //     (
 //         (gene
-//             ((atom Start) (atom 0 StartInhibitor))
+//             ((record Start) (record 0 StartInhibitor))
 //             ())
 //         (gene
 //             ()
 //             ())
 //         (gene
-//             ((atom 1 A) (atom 12 C) (atom n B))
+//             ((record 1 A) (record 12 C) (record n B))
 //             ()))
 //     ()
 //     ())

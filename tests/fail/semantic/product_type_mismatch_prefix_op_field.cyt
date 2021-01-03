@@ -1,4 +1,4 @@
-atom Input(name: string)
+record Input(name: string)
 
 enzyme InvalidPrefixOp[a: Input] -> Input(name: -a.name)
 

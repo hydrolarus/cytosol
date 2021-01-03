@@ -1,9 +1,9 @@
 extern display_person(person: Person)
 extern display_string(s: string)
 
-atom Person(name: string, age: int)
+record Person(name: string, age: int)
 
-atom Thing
+record Thing
 
 gene [p: Person]
 {
@@ -15,10 +15,10 @@ gene [p: Person]
 
 // expected stderr:
 // (file
-//     ((atom Person ((name string) (age int))) (atom Thing ()))
+//     ((record Person ((name string) (age int))) (record Thing ()))
 //     (
 //         (gene
-//             ((atom p Person))
+//             ((record p Person))
 //             (
 //                 (call display_person ((person p)))
 //                 (call display_string ((s (.name p)))))))

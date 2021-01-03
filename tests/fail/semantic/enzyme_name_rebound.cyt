@@ -1,5 +1,5 @@
-atom A
-atom B
+record A
+record B
 
 enzyme Test[a: A, a: B] -> A
 

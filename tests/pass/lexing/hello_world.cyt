@@ -1,7 +1,7 @@
 extern print_line(s: string)
 
-atom Start
-atom StartInhibitor
+record Start
+record StartInhibitor
 
 gene [Start, 0 StartInhibitor]
 {
@@ -19,9 +19,9 @@ gene [Start, 0 StartInhibitor]
 // Colon
 // Identifier("string")
 // ParenClose
-// Atom
+// Record
 // Identifier("Start")
-// Atom
+// Record
 // Identifier("StartInhibitor")
 // Gene
 // BracketOpen

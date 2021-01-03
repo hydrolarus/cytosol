@@ -1,0 +1,25 @@
+record A(b: B)
+record B(c: C)
+record C(a: A)
+
+
+record Self(s: Self)
+
+// args: --no-colour
+
+// expected stderr:
+// error: recursive record types
+//   ┌─ ../tests/fail/semantic/recursive_record.cyt:3:8
+//   │
+// 1 │ record A(b: B)
+//   │        - record is part of a recursive cycle
+// 2 │ record B(c: C)
+//   │        - record is part of a recursive cycle
+// 3 │ record C(a: A)
+//   │        ^ record has infinite size
+// 
+// error: recursive record type
+//   ┌─ ../tests/fail/semantic/recursive_record.cyt:6:8
+//   │
+// 6 │ record Self(s: Self)
+//   │        ^^^^ record has infinite size

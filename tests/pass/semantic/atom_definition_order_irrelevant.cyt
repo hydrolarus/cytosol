@@ -1,7 +1,7 @@
-atom Test(t: Test2)
-atom Test2
+record Test(t: Test2)
+record Test2
 
-atom B
-atom A(b: B)
+record B
+record A(b: B)
 
 // args: --no-colour
