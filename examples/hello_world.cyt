@@ -1,5 +1,6 @@
 extern print_line(msg: string)
 
+record Start
 record StartInhibitor
 
 gene [Start, 0 StartInhibitor]

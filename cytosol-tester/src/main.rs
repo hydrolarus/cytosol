@@ -1,6 +1,12 @@
 use std::path::PathBuf;
 
-use cytosol::driver::DriverRunner;
+use cytosol::{
+    driver::DriverRunner,
+    hir::Program,
+    runtime::{
+        value::Value, CellEnv, CellEnvSummary, ExecutionContext, ProgramContext, RuntimeVars,
+    },
+};
 
 use clap::Clap;
 use driver::TestDriver;
@@ -36,11 +42,16 @@ struct Arguments {
     #[clap(long)]
     no_semantic_analysis: bool,
 
+    #[clap(long)]
+    tmp_actually_run: bool,
+
     file_paths: Vec<PathBuf>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Arguments = Arguments::parse();
+
+    let mut prog = cytosol::hir::Program::new();
 
     let driver = TestDriver::new(args.dump_tokens, args.dump_ast, args.no_semantic_analysis);
 
@@ -50,13 +61,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         runner.add_file_from_path(file)?;
     }
 
-    let _prog = match runner.compile() {
-        Ok(prog) => prog,
-        Err(err) => {
-            runner.report_error(&err, !args.no_colour);
-            return Ok(());
-        }
-    };
+    if let Err(err) = runner.compile(&mut prog) {
+        runner.report_error(&prog, &err, !args.no_colour);
+        return Ok(());
+    }
 
     if args.perf_report {
         runner
@@ -72,5 +80,50 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .print_per_file_perf_report(&mut std::io::stdout())?;
     }
 
+    if args.tmp_actually_run {
+        execute(&prog);
+    }
+
     Ok(())
+}
+
+fn execute(prog: &Program) {
+    let mut prog_ctx = ProgramContext::new();
+    prog_ctx.set_extern_function("print_line", |s: String| {
+        println!("{}", s);
+    });
+
+    let mut env = CellEnv::default();
+
+    env.records.insert(
+        prog.record_by_name("Start").unwrap(),
+        vec![Value::Record(vec![])],
+    );
+
+    let mut summ = CellEnvSummary::default();
+    env.summary(&mut summ);
+
+    let mut exec_ctx = ExecutionContext::default();
+
+    exec_ctx.prepare_execution(prog, &mut summ);
+
+    let mut vars = RuntimeVars::default();
+
+    loop {
+        let mut any = false;
+
+        for gene_id in exec_ctx.eligable_genes() {
+            vars.clear();
+
+            prog_ctx.run_gene(prog, &mut env, &mut vars, gene_id);
+            any = true;
+        }
+
+        env.summary(&mut summ);
+        exec_ctx.prepare_execution(prog, &mut summ);
+
+        if !any {
+            return;
+        }
+    }
 }

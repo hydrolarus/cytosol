@@ -10,4 +10,5 @@ edition = "2018"
 cytosol-syntax = { path = "../cytosol-syntax" }
 cytosol-parser = { path = "../cytosol-parser" }
 cytosol-hir = { path = "../cytosol-hir" }
+cytosol-runtime = { path = "../cytosol-runtime" }
 codespan-reporting = "0.11"

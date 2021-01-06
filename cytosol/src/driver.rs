@@ -42,7 +42,7 @@ pub struct DriverRunner<D: Driver = DefaultDriver> {
     driver: D,
     files: SimpleFiles<FileName, String>,
     file_ids: Vec<FileId>,
-    program: Program,
+    latest_file_ids: Vec<FileId>,
 }
 
 impl Default for DriverRunner {
@@ -57,7 +57,7 @@ impl<D: Driver> DriverRunner<D> {
             driver,
             files: SimpleFiles::new(),
             file_ids: Default::default(),
-            program: Program::default(),
+            latest_file_ids: vec![],
         }
     }
 
@@ -69,6 +69,7 @@ impl<D: Driver> DriverRunner<D> {
 
         let id = self.files.add(name, source);
         self.file_ids.push(id);
+        self.latest_file_ids.push(id);
 
         Ok(())
     }
@@ -78,27 +79,28 @@ impl<D: Driver> DriverRunner<D> {
 
         let id = self.files.add(name, source);
         self.file_ids.push(id);
+        self.latest_file_ids.push(id);
     }
 
-    pub fn compile(&mut self) -> Result<(), CompileError> {
+    pub fn compile(&mut self, prog: &mut Program) -> Result<(), CompileError> {
         let mut file_asts = vec![];
 
-        for id in &self.file_ids {
-            let source_file = self.files.get(*id).unwrap();
+        for id in self.latest_file_ids.drain(..) {
+            let source_file = self.files.get(id).unwrap();
 
             let ast = self
                 .driver
-                .process_file(source_file.name(), *id, source_file.source())?;
+                .process_file(source_file.name(), id, source_file.source())?;
 
             file_asts.push(ast);
         }
 
-        self.driver.compile_files(&mut self.program, &file_asts)?;
+        self.driver.compile_files(prog, &file_asts)?;
 
         Ok(())
     }
 
-    pub fn report_error(&self, err: &CompileError, coloured_output: bool) {
+    pub fn report_error(&self, prog: &Program, err: &CompileError, coloured_output: bool) {
         match err {
             CompileError::Lexer { unknown_tok_fc } => {
                 reporting::report_lexing_error(coloured_output, &self.files, *unknown_tok_fc);
@@ -107,12 +109,7 @@ impl<D: Driver> DriverRunner<D> {
                 reporting::report_parse_error(coloured_output, &self.files, err);
             }
             CompileError::AstToHir(errs) => {
-                reporting::report_hir_translate_errors(
-                    coloured_output,
-                    &self.files,
-                    &self.program,
-                    errs,
-                );
+                reporting::report_hir_translate_errors(coloured_output, &self.files, prog, errs);
             }
         }
     }
