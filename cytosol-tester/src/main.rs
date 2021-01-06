@@ -119,11 +119,11 @@ fn execute(prog: &Program) {
             any = true;
         }
 
-        env.summary(&mut summ);
-        exec_ctx.prepare_execution(prog, &mut summ);
-
         if !any {
             return;
         }
+
+        env.summary(&mut summ);
+        exec_ctx.prepare_execution(prog, &mut summ);
     }
 }

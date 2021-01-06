@@ -1,0 +1,39 @@
+extern print_line(msg: string)
+
+record Start
+record StartInhibitor
+
+gene [Start, 0 StartInhibitor]
+{
+    express StartInhibitor
+    express A
+}
+
+record A
+record InhibitA
+
+gene [A, 0 InhibitA]
+{
+    call print_line(msg: "A")
+    express InhibitA
+    express B
+}
+
+record B
+record InhibitB
+
+gene [B, 0 InhibitB]
+{
+    call print_line(msg: "B")
+    express InhibitB
+    express C
+}
+
+record C
+record InhibitC
+
+gene [C, 0 InhibitC]
+{
+    call print_line(msg: "C")
+    express InhibitC
+}
