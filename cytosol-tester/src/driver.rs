@@ -1,6 +1,7 @@
 use cytosol::{
-    driver::{CompileError, Driver, FileName},
+    driver::{CompileError, Driver, DriverExecutionState, FileName, RunResult},
     hir::Program,
+    runtime::CellEnv,
     syntax::File,
 };
 
@@ -73,5 +74,17 @@ impl Driver for TestDriver {
             .map_err(CompileError::AstToHir)?;
 
         Ok(())
+    }
+
+    fn execution_iteration(
+        &mut self,
+        prog: &Program,
+        exec_state: &mut DriverExecutionState,
+        env: &mut CellEnv,
+    ) -> RunResult {
+        let gene_res = exec_state.run_gene_stage(prog, env);
+        let enzyme_res = exec_state.run_enzyme_stage(prog, env);
+
+        gene_res.and_then(enzyme_res)
     }
 }

@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
 use cytosol::{
-    driver::DriverRunner,
+    driver::{Driver, DriverExecutionState, DriverRunner},
     hir::Program,
-    runtime::{CellEnv, CellEnvSummary, ExecutionPlan, ProgramContext, RuntimeVars},
+    runtime::CellEnv,
 };
 
 use clap::Clap;
@@ -82,16 +82,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    execute(&prog);
+    execute(&prog, &mut runner);
 
     Ok(())
 }
 
-fn execute(prog: &Program) {
-    let mut prog_ctx = ProgramContext::new();
-    prog_ctx.set_extern_function("print_line", |s: String| println!("{}", s));
-    prog_ctx.set_extern_function("print_string", |s: String| print!("{}", s));
-    prog_ctx.set_extern_function("print_int", |i: isize| print!("{}", i));
+fn execute<D: Driver>(prog: &Program, runner: &mut DriverRunner<D>) {
+    let mut exec_state = DriverExecutionState::default();
+
+    {
+        let ctx = exec_state.program_context();
+        ctx.set_extern_function("print_line", |s: String| println!("{}", s));
+        ctx.set_extern_function("print_string", |s: String| print!("{}", s));
+        ctx.set_extern_function("print_int", |i: isize| print!("{}", i));
+    }
 
     let mut env = CellEnv::default();
 
@@ -99,35 +103,7 @@ fn execute(prog: &Program) {
         env.add_record(1, id, vec![]);
     }
 
-    let mut summ = CellEnvSummary::default();
-
-    let mut exec_ctx = ExecutionPlan::default();
-
-    let mut vars = RuntimeVars::default();
-
-    loop {
-        let mut ran_genes = false;
-
-        env.summary(&mut summ);
-        exec_ctx.prepare_gene_execution(prog, &mut summ);
-
-        for gene_id in exec_ctx.eligable_genes() {
-            vars.clear();
-
-            prog_ctx.run_gene(prog, &mut env, &mut vars, gene_id);
-            ran_genes = true;
-        }
-
-        env.summary(&mut summ);
-        exec_ctx.prepare_enzyme_execution(prog, &mut summ);
-
-        let ran_enzymes =
-            prog_ctx.run_enzymes(prog, &mut env, &mut vars, exec_ctx.eligable_enzymes());
-
-        if !ran_genes && !ran_enzymes {
-            return;
-        }
-    }
+    runner.run(prog, &mut exec_state, &mut env, 300);
 }
 
 /*

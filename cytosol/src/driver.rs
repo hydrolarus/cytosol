@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use codespan_reporting::files::SimpleFiles;
 use cytosol_hir::{ast_to_hir::Error as AstToHirError, Program};
 use cytosol_parser::ParseError;
+use cytosol_runtime::{CellEnv, CellEnvSummary, ExecutionPlan, ProgramContext, RuntimeVars};
 use cytosol_syntax::{File, FileId, FC};
 
 use crate::reporting;
@@ -35,7 +36,15 @@ pub trait Driver {
         file_id: FileId,
         source: &str,
     ) -> Result<File, CompileError>;
+
     fn compile_files(&mut self, prog: &mut Program, files: &[File]) -> Result<(), CompileError>;
+
+    fn execution_iteration(
+        &mut self,
+        prog: &Program,
+        exec_state: &mut DriverExecutionState,
+        env: &mut CellEnv,
+    ) -> RunResult;
 }
 
 pub struct DriverRunner<D: Driver = DefaultDriver> {
@@ -114,6 +123,41 @@ impl<D: Driver> DriverRunner<D> {
         }
     }
 
+    pub fn run_single_iteration(
+        &mut self,
+        prog: &Program,
+        exec_state: &mut DriverExecutionState,
+        env: &mut CellEnv,
+    ) -> RunResult {
+        self.driver.execution_iteration(prog, exec_state, env)
+    }
+
+    pub fn run(
+        &mut self,
+        prog: &Program,
+        exec_state: &mut DriverExecutionState,
+        env: &mut CellEnv,
+        iter_bound: impl Into<Option<usize>>,
+    ) {
+        let bound = iter_bound.into();
+
+        if let Some(iterations) = bound {
+            for _ in 0..iterations {
+                let res = self.run_single_iteration(prog, exec_state, env);
+                if res == RunResult::NoProgress {
+                    return;
+                }
+            }
+        } else {
+            loop {
+                let res = self.run_single_iteration(prog, exec_state, env);
+                if res == RunResult::NoProgress {
+                    return;
+                }
+            }
+        }
+    }
+
     pub fn driver(&self) -> &D {
         &self.driver
     }
@@ -146,5 +190,86 @@ impl Driver for DefaultDriver {
     fn compile_files(&mut self, prog: &mut Program, files: &[File]) -> Result<(), CompileError> {
         crate::hir::ast_to_hir::files_to_hir(prog, files).map_err(CompileError::AstToHir)?;
         Ok(())
+    }
+
+    fn execution_iteration(
+        &mut self,
+        prog: &Program,
+        exec_state: &mut DriverExecutionState,
+        env: &mut CellEnv,
+    ) -> RunResult {
+        let gene_res = exec_state.run_gene_stage(prog, env);
+        let enzyme_res = exec_state.run_enzyme_stage(prog, env);
+
+        gene_res.and_then(enzyme_res)
+    }
+}
+
+#[derive(Default)]
+pub struct DriverExecutionState {
+    prog_ctx: ProgramContext,
+    cell_env_summ: CellEnvSummary,
+    exec_plan: ExecutionPlan,
+    runtime_vars: RuntimeVars,
+}
+
+impl DriverExecutionState {
+    pub fn program_context(&mut self) -> &mut ProgramContext {
+        &mut self.prog_ctx
+    }
+
+    pub fn run_gene_stage(&mut self, prog: &Program, env: &mut CellEnv) -> RunResult {
+        env.summary(&mut self.cell_env_summ);
+        self.exec_plan
+            .prepare_gene_execution(prog, &mut self.cell_env_summ);
+
+        let mut ran_any_genes = false;
+        for gene_id in self.exec_plan.eligable_genes() {
+            self.runtime_vars.clear();
+
+            self.prog_ctx
+                .run_gene(prog, env, &mut self.runtime_vars, gene_id);
+            ran_any_genes = true;
+        }
+
+        if ran_any_genes {
+            RunResult::MadeProgress
+        } else {
+            RunResult::NoProgress
+        }
+    }
+
+    pub fn run_enzyme_stage(&mut self, prog: &Program, env: &mut CellEnv) -> RunResult {
+        env.summary(&mut self.cell_env_summ);
+        self.exec_plan
+            .prepare_enzyme_execution(prog, &mut self.cell_env_summ);
+
+        let ran_any_enzymes = self.prog_ctx.run_enzymes(
+            prog,
+            env,
+            &mut self.runtime_vars,
+            self.exec_plan.eligable_enzymes(),
+        );
+
+        if ran_any_enzymes {
+            RunResult::MadeProgress
+        } else {
+            RunResult::NoProgress
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunResult {
+    MadeProgress,
+    NoProgress,
+}
+
+impl RunResult {
+    pub fn and_then(self, other: Self) -> Self {
+        match self {
+            RunResult::MadeProgress => RunResult::MadeProgress,
+            RunResult::NoProgress => other,
+        }
     }
 }

@@ -7,7 +7,7 @@ An embeddable programming language somewhat resembling cellular processes.
 * [x] tokenising
 * [x] parsing
 * [x] semantic analysis and translation
-* [ ] runtime system and host API **⇐ in progress**
+* [x] runtime system and host API
 
 ## Overview of the language
 
@@ -82,7 +82,7 @@ Similarly to the `express` statement, the product list can also contain quantiti
 With the `extern` keyword a function can be declared that can be called from within `gene` function with the `call` statement.
 
 ```
-extern print_string(s: string)
+extern print_line(s: string)
 
 // Similar to a "main" function.
 //
@@ -93,7 +93,7 @@ extern print_string(s: string)
 // run only once.
 gene [Start, 0 StartInhibitor]
 {
-    call print_string(s: "hello world")
+    call print_line(s: "hello world")
     express StartInhibitor
 }
 
@@ -101,7 +101,17 @@ record Start
 record StartInhibitor
 ```
 
-**TODO:** show the API used to insert Rust functions as `extern` functions once it's implemented.
+Implementations for `extern` functions can be provided through the `ProgramContext` of the `DriverExecutionState`.
+
+```rust
+let mut exec_state = DriverExecutionState::default();
+
+let ctx = exec_state.program_context();
+ctx.set_extern_function("print_line", |s: String| println!("{}", s);
+ctx.set_extern_function("print_string", |s: String| print!("{}", s);
+ctx.set_extern_function("print_int", |i: isize| print!("{}", i));
+
+```
 
 ## License
 
