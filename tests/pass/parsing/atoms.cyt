@@ -11,7 +11,7 @@ gene [p: Person]
     call display_string(s: p.name)
 }
 
-// args: --dump-ast
+// args: --dump-ast --no-run
 
 // expected stderr:
 // (file

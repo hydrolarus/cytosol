@@ -3,9 +3,7 @@ use std::path::PathBuf;
 use cytosol::{
     driver::DriverRunner,
     hir::Program,
-    runtime::{
-        value::Value, CellEnv, CellEnvSummary, ExecutionContext, ProgramContext, RuntimeVars,
-    },
+    runtime::{CellEnv, CellEnvSummary, ExecutionPlan, ProgramContext, RuntimeVars},
 };
 
 use clap::Clap;
@@ -43,7 +41,7 @@ struct Arguments {
     no_semantic_analysis: bool,
 
     #[clap(long)]
-    tmp_actually_run: bool,
+    no_run: bool,
 
     file_paths: Vec<PathBuf>,
 }
@@ -80,50 +78,90 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .print_per_file_perf_report(&mut std::io::stdout())?;
     }
 
-    if args.tmp_actually_run {
-        execute(&prog);
+    if args.no_run {
+        return Ok(());
     }
+
+    execute(&prog);
 
     Ok(())
 }
 
 fn execute(prog: &Program) {
     let mut prog_ctx = ProgramContext::new();
-    prog_ctx.set_extern_function("print_line", |s: String| {
-        println!("{}", s);
-    });
+    prog_ctx.set_extern_function("print_line", |s: String| println!("{}", s));
+    prog_ctx.set_extern_function("print_string", |s: String| print!("{}", s));
+    prog_ctx.set_extern_function("print_int", |i: isize| print!("{}", i));
 
     let mut env = CellEnv::default();
 
-    env.records.insert(
-        prog.record_by_name("Start").unwrap(),
-        vec![Value::Record(vec![])],
-    );
+    if let Some(id) = prog.record_by_name("Start") {
+        env.add_record(1, id, vec![]);
+    }
 
     let mut summ = CellEnvSummary::default();
-    env.summary(&mut summ);
 
-    let mut exec_ctx = ExecutionContext::default();
-
-    exec_ctx.prepare_execution(prog, &mut summ);
+    let mut exec_ctx = ExecutionPlan::default();
 
     let mut vars = RuntimeVars::default();
 
     loop {
-        let mut any = false;
+        let mut ran_genes = false;
+
+        env.summary(&mut summ);
+        exec_ctx.prepare_gene_execution(prog, &mut summ);
 
         for gene_id in exec_ctx.eligable_genes() {
             vars.clear();
 
             prog_ctx.run_gene(prog, &mut env, &mut vars, gene_id);
-            any = true;
-        }
-
-        if !any {
-            return;
+            ran_genes = true;
         }
 
         env.summary(&mut summ);
-        exec_ctx.prepare_execution(prog, &mut summ);
+        exec_ctx.prepare_enzyme_execution(prog, &mut summ);
+
+        let ran_enzymes =
+            prog_ctx.run_enzymes(prog, &mut env, &mut vars, exec_ctx.eligable_enzymes());
+
+        if !ran_genes && !ran_enzymes {
+            return;
+        }
     }
 }
+
+/*
+fn dbg_print_env(prog: &Program, env: &CellEnv) {
+    println!("Env:");
+
+    println!("  Records: ");
+    for (id, instances) in &env.records {
+        let name = &prog[*id].name.1;
+        println!("    # {} = {}", name, instances.len());
+    }
+
+    println!("  Enzymes: ");
+    for (id, num) in &env.enzymes {
+        let name = &prog[*id].name.1;
+        println!("    # {} = {}", name, num);
+    }
+    println!();
+}
+
+fn dbg_print_exec_plan(prog: &Program, plan: &ExecutionPlan) {
+    println!("Env plan:");
+
+    println!("  Genes: ");
+    for id in plan.eligable_genes() {
+        println!("    {:?}", id);
+    }
+
+    println!("  Enzymes: ");
+    for (id, n) in plan.eligable_enzymes() {
+        let name = &prog[id].name.1;
+        println!("    # {} = {}", name, n);
+    }
+    println!();
+}
+
+*/

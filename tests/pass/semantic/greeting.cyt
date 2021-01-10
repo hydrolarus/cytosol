@@ -1,15 +1,28 @@
-extern print_string(s: string)
+extern print_string(msg: string)
 
 record NameInput(name: string)
 record NameDegrader
 
 enzyme RemoveNameInput[NameInput, NameDegrader] -> nothing
 
+record Start
+record StartInhibitor
+
+gene [Start, 0 StartInhibitor]
+{
+    express StartInhibitor
+    express NameInput(name: "traveller")
+    express RemoveNameInput
+}
+
 gene [n: NameInput]
 {
-    call print_string(s: "Greeting, ")
-    call print_string(s: n.name)
-    call print_string(s: "!\n")
+    call print_string(msg: "Greetings, ")
+    call print_string(msg: n.name)
+    call print_string(msg: "!\n")
 
     express NameDegrader
 }
+
+// expected stdout:
+// Greetings, traveller!

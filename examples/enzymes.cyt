@@ -1,0 +1,23 @@
+extern print_line(msg: string)
+
+record Start
+record StartInhibitor
+
+record A
+
+gene [Start, 0 StartInhibitor]
+{
+    call print_line(msg: "Start")
+    express StartInhibitor
+    express RemoveStart
+    express A
+}
+
+gene [A]
+{
+    call print_line(msg: "An `A` record was expressed")
+    express RemoveA
+}
+
+enzyme RemoveStart[Start, StartInhibitor] -> nothing
+enzyme RemoveA[A] -> nothing

@@ -1,0 +1,30 @@
+extern print_line(msg: string)
+extern print_string(s: string)
+extern print_int(i: int)
+
+record Start
+record StartInhibitor
+
+record Add(a: int, b: int)
+record AddInhibitor
+
+gene [Start, 0 StartInhibitor]
+{
+    express Add(a: 30, b: 12)
+    express StartInhibitor
+}
+
+gene [to_add: Add, 0 AddInhibitor]
+{
+    call print_int(i: to_add.a)
+    call print_string(s: " + ")
+    call print_int(i: to_add.b)
+    call print_string(s: " = ")
+    call print_int(i: to_add.a + to_add.b)
+    call print_line(msg: "")
+
+    express AddInhibitor
+}
+
+// expected stdout:
+// 30 + 12 = 42

@@ -7,7 +7,7 @@ gene [Start]
     call print_line(s: "Hello!")
 }
 
-// args: --dump-ast
+// args: --dump-ast --no-run
 
 // expected stderr:
 // (file

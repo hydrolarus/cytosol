@@ -9,7 +9,7 @@ gene [Start, 0 StartInhibitor]
     call print_line(s: "hello, world.")
 }
 
-// args: --dump-ast
+// args: --dump-ast --no-run
 
 // expected stderr:
 // (file
