@@ -20,9 +20,8 @@ pub struct Program {
     pub records_by_name: HashMap<String, RecordId>,
     pub records_fc: HashMap<RecordId, FC>,
 
-    pub enzymes: Arena<Enzyme>,
-    pub enzymes_by_name: HashMap<String, EnzymeId>,
-    pub enzymes_fc: HashMap<EnzymeId, FC>,
+    pub rules: Arena<Rule>,
+    pub rules_fc: HashMap<RuleId, FC>,
     pub genes: Arena<Gene>,
     pub genes_fc: HashMap<GeneId, FC>,
     pub gene_stmts: Arena<GeneStatement>,
@@ -61,9 +60,8 @@ impl Program {
             records: Default::default(),
             records_by_name: Default::default(),
             records_fc: Default::default(),
-            enzymes: Default::default(),
-            enzymes_by_name: Default::default(),
-            enzymes_fc: Default::default(),
+            rules: Default::default(),
+            rules_fc: Default::default(),
             genes: Default::default(),
             genes_fc: Default::default(),
             gene_stmts: Default::default(),
@@ -80,21 +78,8 @@ impl Program {
     pub fn add_type(&mut self, val: Type) -> TypeId {
         match &val {
             Type::Record(record_id) => {
-                let record = &self[*record_id];
+                let record: &Record = &self[*record_id];
                 let name = record.name.1.clone();
-
-                match self.types_by_name.entry(name) {
-                    std::collections::hash_map::Entry::Occupied(entry) => *entry.get(),
-                    std::collections::hash_map::Entry::Vacant(entry) => {
-                        let id = self.types.alloc(val);
-                        let _ = entry.insert(id);
-                        id
-                    }
-                }
-            }
-            Type::Enzyme(enz_id) => {
-                let enzyme = &self[*enz_id];
-                let name = enzyme.name.1.clone();
 
                 match self.types_by_name.entry(name) {
                     std::collections::hash_map::Entry::Occupied(entry) => *entry.get(),
@@ -116,7 +101,6 @@ impl Program {
             Type::Int => None,
             Type::String => None,
             Type::Record(id) => self.record(*id).map(|a| &a.name),
-            Type::Enzyme(id) => self.enzyme(*id).map(|a| &a.name),
         }
     }
 
@@ -186,30 +170,14 @@ impl Program {
         self.records_by_name.get(name).copied()
     }
 
-    pub fn add_enzyme(&mut self, fc: FC, val: Enzyme) -> Option<EnzymeId> {
-        let name = val.name.1.clone();
-
-        if self.type_by_name(&name).is_some() {
-            return None;
-        }
-
-        match self.enzymes_by_name.entry(name) {
-            std::collections::hash_map::Entry::Occupied(_) => None,
-            std::collections::hash_map::Entry::Vacant(entry) => {
-                let id = self.enzymes.alloc(val);
-                let _ = entry.insert(id);
-                let overwritten = self.enzymes_fc.insert(id, fc).is_some();
-                debug_assert_eq!(
-                    overwritten, false,
-                    "FC should only be inserted for a fresh EnzymeId"
-                );
-                Some(id)
-            }
-        }
-    }
-
-    pub fn enzyme_by_name(&self, name: &str) -> Option<EnzymeId> {
-        self.enzymes_by_name.get(name).copied()
+    pub fn add_rule(&mut self, fc: FC, rule: Rule) -> RuleId {
+        let id = self.rules.alloc(rule);
+        let overwritten = self.rules_fc.insert(id, fc).is_some();
+        debug_assert_eq!(
+            overwritten, false,
+            "FC should only be inserted for a fresh RuleId"
+        );
+        id
     }
 
     pub fn add_gene(&mut self, fc: FC, val: Gene) -> GeneId {
@@ -271,8 +239,8 @@ impl Program {
     fc_impl!(ext_fc, ExternId, exts_fc);
     get_impl!(record, RecordId, Record, records);
     fc_impl!(record_fc, RecordId, records_fc);
-    get_impl!(enzyme, EnzymeId, Enzyme, enzymes);
-    fc_impl!(enzyme_fc, EnzymeId, enzymes_fc);
+    get_impl!(rule, RuleId, Rule, rules);
+    fc_impl!(rule_fc, RuleId, rules_fc);
     get_impl!(gene, GeneId, Gene, genes);
     fc_impl!(gene_fc, GeneId, genes_fc);
     get_impl!(gene_stmt, GeneStatementId, GeneStatement, gene_stmts);
@@ -296,7 +264,7 @@ macro_rules! index_impl {
 index_impl!(TypeId, Type, types);
 index_impl!(ExternId, Extern, exts);
 index_impl!(RecordId, Record, records);
-index_impl!(EnzymeId, Enzyme, enzymes);
+index_impl!(RuleId, Rule, rules);
 index_impl!(GeneId, Gene, genes);
 index_impl!(GeneStatementId, GeneStatement, gene_stmts);
 index_impl!(ExpressionId, Expression, exprs);

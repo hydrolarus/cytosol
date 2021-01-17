@@ -3,7 +3,9 @@ extern print_string(msg: string)
 record NameInput(name: string)
 record NameDegrader
 
-enzyme RemoveNameInput[NameInput, NameDegrader] -> nothing
+record RemoveNameInput
+
+rule [RemoveNameInput, NameInput, NameDegrader] -> RemoveNameInput
 
 record Start
 record StartInhibitor

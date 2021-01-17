@@ -12,7 +12,7 @@ pub struct FC {
 pub struct File {
     pub records: Vec<Record>,
     pub genes: Vec<Gene>,
-    pub enzymes: Vec<Enzyme>,
+    pub rules: Vec<Rule>,
     pub externs: Vec<Extern>,
 }
 
@@ -59,9 +59,8 @@ pub struct Gene {
 }
 
 #[derive(Debug, Clone)]
-pub struct Enzyme {
+pub struct Rule {
     pub fc: FC,
-    pub name: Identifier,
     pub reactants: Vec<Binding>,
     pub products: Vec<Product>,
 }

@@ -1,0 +1,22 @@
+rule [A, B] -> C
+
+rule [C] -> nothing
+rule [C] -> Ø
+
+rule [1 A, 2 C] -> 10 D
+
+rule [a: A, 0 B, c: C] -> nothing
+
+// args: --dump-ast --no-semantic-analysis
+
+// expected stderr:
+// (file
+//     ()
+//     ()
+//     (
+//         (rule ((record A) (record B)) ((product C)))
+//         (rule ((record C)) ())
+//         (rule ((record C)) ())
+//         (rule ((record 1 A) (record 2 C)) ((product 10 D)))
+//         (rule ((record a A) (record 0 B) (record c C)) ()))
+//     ())

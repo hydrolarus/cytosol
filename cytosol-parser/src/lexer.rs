@@ -14,8 +14,8 @@ pub enum TokenKind<'src> {
     #[token("gene")]
     Gene,
 
-    #[token("enzyme")]
-    Enzyme,
+    #[token("rule")]
+    Rule,
 
     #[token("express")]
     Express,

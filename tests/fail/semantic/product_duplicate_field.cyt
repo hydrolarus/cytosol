@@ -1,14 +1,14 @@
 record Person(name: string)
 
-enzyme DuplicateField[] -> Person(name: "a", name: "b")
+rule [] -> Person(name: "a", name: "b")
 
 // args: --no-colour
 
 // expected stderr:
 // error: duplicated field `name` on record `Person`
-//   ┌─ ../tests/fail/semantic/product_duplicate_field.cyt:3:46
+//   ┌─ ../tests/fail/semantic/product_duplicate_field.cyt:3:30
 //   │
-// 3 │ enzyme DuplicateField[] -> Person(name: "a", name: "b")
-//   │                                   ----       ^^^^ this is a duplicate field
-//   │                                   │           
-//   │                                   field already supplied here
+// 3 │ rule [] -> Person(name: "a", name: "b")
+//   │                   ----       ^^^^ this is a duplicate field
+//   │                   │           
+//   │                   field already supplied here

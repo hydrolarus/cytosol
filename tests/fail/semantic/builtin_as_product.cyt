@@ -1,10 +1,10 @@
-enzyme BuiltinAsProduct[] -> int
+rule [] -> int
 
 // args: --no-colour
 
 // expected stderr:
 // error: builtin type `int` cannot be used as a product
-//   ┌─ ../tests/fail/semantic/builtin_as_product.cyt:1:30
+//   ┌─ ../tests/fail/semantic/builtin_as_product.cyt:1:12
 //   │
-// 1 │ enzyme BuiltinAsProduct[] -> int
-//   │                              ^^^ builtin type cannot be used a product
+// 1 │ rule [] -> int
+//   │            ^^^ builtin type cannot be used a product

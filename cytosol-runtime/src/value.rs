@@ -5,7 +5,6 @@ pub enum Value {
     Integer(isize),
     String(String),
     Record(RecordFields),
-    Enzyme,
 }
 
 pub trait FromValue<'val>

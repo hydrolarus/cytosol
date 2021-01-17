@@ -3,10 +3,10 @@ struct Test(a: int, b: string)
 // args: --no-colour
 
 // expected stderr:
-// error[parse-error]: expected `record`, `gene`, `enzyme` or `extern`, found `struct`
+// error[parse-error]: expected `record`, `gene`, `rule` or `extern`, found `struct`
 //   ┌─ ../tests/fail/parsing/wrong_keyword.cyt:1:1
 //   │
 // 1 │ struct Test(a: int, b: string)
-//   │ ^^^^^^ expected `record`, `gene`, `enzyme` or `extern`
+//   │ ^^^^^^ expected `record`, `gene`, `rule` or `extern`
 //   │
 //   = error while parsing a top level item

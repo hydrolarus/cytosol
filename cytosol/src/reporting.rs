@@ -375,17 +375,6 @@ pub(crate) fn report_hir_translate_errors<'a>(
                     .with_message(message)
                     .with_labels(vec![label])
             }
-            Error::ProductEnzymeWithField { fc, name } => {
-                let message = format!("enzyme type `{}` does not have fields", name.1);
-
-                let label =
-                    Label::primary(fc.file, fc.range()).with_message("enzymes do not have fields");
-
-                Diagnostic::error()
-                    .with_message(message)
-                    .with_labels(vec![label])
-                    .with_notes(vec![format!("try using `{}` without any fields", name.1)])
-            }
             Error::ProductMissingRecordField {
                 record_name,
                 product_fc,

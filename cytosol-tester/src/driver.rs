@@ -84,9 +84,9 @@ impl Driver for TestDriver {
     ) -> RunResult {
         self.perf.record(ProgramStage::Execution, || {
             let gene_res = exec_state.run_gene_stage(prog, env);
-            let enzyme_res = exec_state.run_enzyme_stage(prog, env);
+            let rule_res = exec_state.run_rule_stage(prog, env);
 
-            gene_res.and_then(enzyme_res)
+            gene_res.and_then(rule_res)
         })
     }
 }

@@ -1,8 +1,8 @@
 use thiserror::Error;
 
 use cytosol_syntax::{
-    Binding, BindingAttribute, Enzyme, Expression, Extern, File, FileId, Gene, GeneStatement,
-    HasFC, Identifier, InfixOperator, Literal, PrefixOperator, Product, Record, Type, FC,
+    Binding, BindingAttribute, Expression, Extern, File, FileId, Gene, GeneStatement, HasFC,
+    Identifier, InfixOperator, Literal, PrefixOperator, Product, Record, Rule, Type, FC,
 };
 
 use crate::{lexer::TokenKind, Token};
@@ -175,25 +175,23 @@ impl<'src> Parser<'src> {
                         body: stmts,
                     });
                 }
-                TokenKind::Enzyme => {
+                TokenKind::Rule => {
                     let start_tok = self.next().unwrap();
                     let ec = CTX
-                        .start(start_tok.fc, "enzyme item")
-                        .while_parsing("an enzyme item");
-
-                    let name = self.parse_identifier(ec)?;
+                        .start(start_tok.fc, "rule item")
+                        .while_parsing("a rule item");
 
                     let (_, reactants) = self.grouped_separated(
                         (TokenKind::BracketOpen, TokenKind::BracketClose),
-                        ec.while_parsing("an enzyme reactant list").expected("`[`"),
+                        ec.while_parsing("a rule reactant list").expected("`[`"),
                         TokenKind::Comma,
-                        ec.while_parsing("an enzyme reactant list")
+                        ec.while_parsing("a rule reactant list")
                             .expected("`,` or `]`"),
                         |s| s.parse_binding(ec),
                     )?;
 
                     self.expect(
-                        ec.while_parsing("an enzyme reaction description")
+                        ec.while_parsing("a rule reaction description")
                             .expected("`->`"),
                         |t| t.kind == TokenKind::ArrowR,
                     )?;
@@ -201,9 +199,8 @@ impl<'src> Parser<'src> {
                     let (end_fc, products) = self.parse_product_list(ec)?;
 
                     let fc = start_tok.fc.merge(end_fc);
-                    file.enzymes.push(Enzyme {
+                    file.rules.push(Rule {
                         fc,
-                        name,
                         reactants,
                         products,
                     });
@@ -212,7 +209,7 @@ impl<'src> Parser<'src> {
                     return Err(Error::UnexpectedToken(
                         t.fc,
                         CTX.while_parsing("a top level item")
-                            .expected("`record`, `gene`, `enzyme` or `extern`"),
+                            .expected("`record`, `gene`, `rule` or `extern`"),
                     ))
                 }
             }

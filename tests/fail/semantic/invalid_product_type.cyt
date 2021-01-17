@@ -1,10 +1,10 @@
-enzyme InvalidProductType[a: int] -> nothing
+rule [a: int] -> nothing
 
 // args: --no-colour
 
 // expected stderr:
 // error: type `int` cannot be used in a reactant list
-//   ┌─ ../tests/fail/semantic/invalid_product_type.cyt:1:30
+//   ┌─ ../tests/fail/semantic/invalid_product_type.cyt:1:10
 //   │
-// 1 │ enzyme InvalidProductType[a: int] -> nothing
-//   │                              ^^^ this type cannot be used as a reactant
+// 1 │ rule [a: int] -> nothing
+//   │          ^^^ this type cannot be used as a reactant

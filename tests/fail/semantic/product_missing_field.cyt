@@ -1,15 +1,15 @@
 record Person(name: string, age: int)
 
-enzyme MissingField[] -> Person(age: 20)
+rule [] -> Person(age: 20)
 
 // args: --no-colour
 
 // expected stderr:
 // error: product `Person` is missing a `name` field
-//   ┌─ ../tests/fail/semantic/product_missing_field.cyt:3:26
+//   ┌─ ../tests/fail/semantic/product_missing_field.cyt:3:12
 //   │
 // 1 │ record Person(name: string, age: int)
 //   │               ---- this field is missing
 // 2 │ 
-// 3 │ enzyme MissingField[] -> Person(age: 20)
-//   │                          ^^^^^^^^^^^^^^^ this product is incomplete
+// 3 │ rule [] -> Person(age: 20)
+//   │            ^^^^^^^^^^^^^^^ this product is incomplete

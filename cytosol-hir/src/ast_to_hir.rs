@@ -74,9 +74,6 @@ pub enum Error {
     #[error("Using builtin type {} as a product", .product_name.1)]
     UsingBuiltinTypeAsProduct { product_name: Identifier },
 
-    #[error("Enzymes ({}) do not have fields", .name.1)]
-    ProductEnzymeWithField { fc: FC, name: Identifier },
-
     #[error("Product is missing the {} field", .missing_field.1)]
     ProductMissingRecordField {
         record_name: Identifier,
@@ -171,42 +168,9 @@ impl Translator<'_> {
     }
 
     fn translate_files(&mut self, files: &[ast::File]) {
-        // enzymes can be mutually recursive, so they all need to be added
-        // without any binding information. The binding information then
-        // gets added later on
-        let mut enzymes = vec![];
-        for file in files {
-            for e in &file.enzymes {
-                let enzyme = Enzyme {
-                    name: e.name.clone(),
-                    binds: vec![],
-                    products: vec![],
-                };
-                if let Some(id) = self.prog.add_enzyme(e.fc, enzyme) {
-                    self.prog.add_type(Type::Enzyme(id));
-                    enzymes.push((id, e));
-                } else {
-                    let type_id = self.prog.type_by_name(&e.name.1).unwrap();
-                    let prev_name = if let Some(n) = self.prog.type_ident(type_id) {
-                        n.clone()
-                    } else {
-                        self.add_error(Error::RedefinedBuiltinType {
-                            redef_name: e.name.clone(),
-                        });
-                        continue;
-                    };
-                    self.add_error(Error::RedefinedItem {
-                        orig_name: prev_name,
-                        redef_name: e.name.clone(),
-                    });
-                    continue;
-                }
-            }
-        }
-
         self.setup_records(files);
 
-        self.setup_enzymes(&enzymes);
+        self.setup_rules(files);
 
         self.setup_externs(files);
 
@@ -335,64 +299,63 @@ impl Translator<'_> {
 
     // NOTE: records must be setup first! Otherwise they can't be used as products or
     // reactant types
-    fn setup_enzymes(&mut self, enzymes: &[(EnzymeId, &ast::Enzyme)]) {
+    fn setup_rules(&mut self, files: &[ast::File]) {
         // after they have all been added their binds are filled
-        for (id, e) in enzymes {
-            let mut binds = vec![];
-            let mut bound_vars = VariableMap::new();
+        for file in files {
+            for rule in &file.rules {
+                let mut binds = vec![];
+                let mut bound_vars = VariableMap::new();
 
-            for reactant in &e.reactants {
-                let bind_attr = match &reactant.attr {
-                    Some(ast::BindingAttribute::Quantity(_, n)) => {
-                        if *n == 0 {
-                            Bind::None
-                        } else {
-                            Bind::Quantity(*n)
+                for reactant in &rule.reactants {
+                    let bind_attr = match &reactant.attr {
+                        Some(ast::BindingAttribute::Quantity(_, n)) => {
+                            if *n == 0 {
+                                Bind::None
+                            } else {
+                                Bind::Quantity(*n)
+                            }
                         }
-                    }
-                    Some(ast::BindingAttribute::Name(name)) => {
-                        let ty = if let Some(ty) = self.prog.type_by_name(&reactant.name.1) {
-                            ty
-                        } else {
-                            self.add_error(Error::UnknownType {
-                                name: reactant.name.clone(),
-                            });
-                            continue;
-                        };
-                        if let Some((prev, _)) = bound_vars.insert(&name.1, (name.clone(), ty)) {
-                            self.add_error(Error::NameRebound {
-                                item_fc: e.fc,
-                                name: name.clone(),
-                                orig_name: prev,
-                            });
-                            continue;
+                        Some(ast::BindingAttribute::Name(name)) => {
+                            let ty = if let Some(ty) = self.prog.type_by_name(&reactant.name.1) {
+                                ty
+                            } else {
+                                self.add_error(Error::UnknownType {
+                                    name: reactant.name.clone(),
+                                });
+                                continue;
+                            };
+                            if let Some((prev, _)) = bound_vars.insert(&name.1, (name.clone(), ty))
+                            {
+                                self.add_error(Error::NameRebound {
+                                    item_fc: rule.fc,
+                                    name: name.clone(),
+                                    orig_name: prev,
+                                });
+                                continue;
+                            }
+
+                            Bind::Named(name.clone())
                         }
+                        None => Bind::Quantity(1),
+                    };
 
-                        Bind::Named(name.clone())
+                    if let Some(record_id) = self.prog.record_by_name(&reactant.name.1) {
+                        binds.push((bind_attr, record_id))
+                    } else {
+                        self.add_error(Error::InvalidReactantType {
+                            name: reactant.name.clone(),
+                        });
                     }
-                    None => Bind::Quantity(1),
-                };
-
-                if let Some(record_id) = self.prog.record_by_name(&reactant.name.1) {
-                    binds.push((bind_attr, BindType::Record(record_id)))
-                } else if let Some(enz_id) = self.prog.enzyme_by_name(&reactant.name.1) {
-                    binds.push((bind_attr, BindType::Enzyme(enz_id)));
-                } else {
-                    self.add_error(Error::InvalidReactantType {
-                        name: reactant.name.clone(),
-                    });
                 }
+
+                let products = rule
+                    .products
+                    .iter()
+                    .flat_map(|p| self.translate_product(&bound_vars, p))
+                    .collect();
+
+                let _ = self.prog.add_rule(rule.fc, Rule { binds, products });
             }
-
-            let products = e
-                .products
-                .iter()
-                .flat_map(|p| self.translate_product(&bound_vars, p))
-                .collect();
-
-            let hir_e = &mut self.prog.enzymes[*id];
-            hir_e.binds = binds;
-            hir_e.products = products;
         }
     }
 
@@ -489,9 +452,7 @@ impl Translator<'_> {
                     };
 
                     if let Some(record_id) = self.prog.record_by_name(&factor.name.1) {
-                        binds.push((bind_attr, BindType::Record(record_id)))
-                    } else if let Some(enz_id) = self.prog.enzyme_by_name(&factor.name.1) {
-                        binds.push((bind_attr, BindType::Enzyme(enz_id)));
+                        binds.push((bind_attr, record_id))
                     } else {
                         self.add_error(Error::InvalidFactorType {
                             name: factor.name.clone(),
@@ -595,24 +556,10 @@ impl Translator<'_> {
 
                 self.errors.extend(errs);
 
-                Some(Product::Record {
+                Some(Product {
                     quantity: product.quantity.map(|(_, n)| n).unwrap_or(1),
                     record: id,
                     arguments: args,
-                })
-            }
-            Type::Enzyme(id) => {
-                // Enzymes don't have any fields
-                if !product.fields.is_empty() {
-                    self.add_error(Error::ProductEnzymeWithField {
-                        name: product.name.clone(),
-                        fc: product.fc,
-                    });
-                    return None;
-                }
-                Some(Product::Enzyme {
-                    quantity: product.quantity.map(|(_, n)| n).unwrap_or(1),
-                    enzyme: *id,
                 })
             }
         }

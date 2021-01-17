@@ -3,7 +3,9 @@ use std::path::{Path, PathBuf};
 use codespan_reporting::files::SimpleFiles;
 use cytosol_hir::{ast_to_hir::Error as AstToHirError, Program};
 use cytosol_parser::ParseError;
-use cytosol_runtime::{CellEnv, CellEnvSummary, ExecutionPlan, ProgramContext, RuntimeVars};
+use cytosol_runtime::{
+    run_gene, run_rules, CellEnv, CellEnvSummary, ExecutionPlan, ProgramContext, RuntimeVars,
+};
 use cytosol_syntax::{File, FileId, FC};
 
 use crate::reporting;
@@ -199,9 +201,9 @@ impl Driver for DefaultDriver {
         env: &mut CellEnv,
     ) -> RunResult {
         let gene_res = exec_state.run_gene_stage(prog, env);
-        let enzyme_res = exec_state.run_enzyme_stage(prog, env);
+        let rule_res = exec_state.run_rule_stage(prog, env);
 
-        gene_res.and_then(enzyme_res)
+        gene_res.and_then(rule_res)
     }
 }
 
@@ -227,8 +229,13 @@ impl DriverExecutionState {
         for gene_id in self.exec_plan.eligable_genes() {
             self.runtime_vars.clear();
 
-            self.prog_ctx
-                .run_gene(prog, env, &mut self.runtime_vars, gene_id);
+            run_gene(
+                &mut self.prog_ctx,
+                prog,
+                env,
+                &mut self.runtime_vars,
+                gene_id,
+            );
             ran_any_genes = true;
         }
 
@@ -239,19 +246,19 @@ impl DriverExecutionState {
         }
     }
 
-    pub fn run_enzyme_stage(&mut self, prog: &Program, env: &mut CellEnv) -> RunResult {
+    pub fn run_rule_stage(&mut self, prog: &Program, env: &mut CellEnv) -> RunResult {
         env.summary(&mut self.cell_env_summ);
         self.exec_plan
-            .prepare_enzyme_execution(prog, &mut self.cell_env_summ);
+            .prepare_rule_execution(prog, &mut self.cell_env_summ);
 
-        let ran_any_enzymes = self.prog_ctx.run_enzymes(
+        let ran_any_rules = run_rules(
             prog,
             env,
             &mut self.runtime_vars,
-            self.exec_plan.eligable_enzymes(),
+            self.exec_plan.eligable_rules(),
         );
 
-        if ran_any_enzymes {
+        if ran_any_rules {
             RunResult::MadeProgress
         } else {
             RunResult::NoProgress

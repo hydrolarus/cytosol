@@ -1,8 +1,7 @@
 use std::{borrow::Borrow, ops::Range};
 
 use crate::types::{
-    Binding, Enzyme, Expression, Gene, GeneStatement, Identifier, Literal, Product, Record, Type,
-    FC,
+    Binding, Expression, Gene, GeneStatement, Identifier, Literal, Product, Record, Rule, Type, FC,
 };
 
 impl FC {
@@ -59,7 +58,7 @@ impl HasFC for Gene {
     }
 }
 
-impl HasFC for Enzyme {
+impl HasFC for Rule {
     fn fc(&self) -> FC {
         self.fc
     }

@@ -116,11 +116,6 @@ fn dbg_print_env(prog: &Program, env: &CellEnv) {
         println!("    # {} = {}", name, instances.len());
     }
 
-    println!("  Enzymes: ");
-    for (id, num) in &env.enzymes {
-        let name = &prog[*id].name.1;
-        println!("    # {} = {}", name, num);
-    }
     println!();
 }
 
@@ -132,8 +127,8 @@ fn dbg_print_exec_plan(prog: &Program, plan: &ExecutionPlan) {
         println!("    {:?}", id);
     }
 
-    println!("  Enzymes: ");
-    for (id, n) in plan.eligable_enzymes() {
+    println!("  Rules: ");
+    for (id, n) in plan.eligable_rules() {
         let name = &prog[id].name.1;
         println!("    # {} = {}", name, n);
     }

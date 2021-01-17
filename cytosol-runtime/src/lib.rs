@@ -5,7 +5,7 @@ use rand::prelude::*;
 use cytosol_hir as hir;
 use hir::{
     ast::{InfixOperator, PrefixOperator},
-    types::{Bind, BindType, Enzyme, EnzymeId, ExpressionId, Gene, GeneId, Product, RecordId},
+    types::{Bind, ExpressionId, Gene, GeneId, Product, RecordId, Rule, RuleId},
     Program,
 };
 
@@ -33,100 +33,89 @@ impl ProgramContext {
         let f = move |args: &[Value]| f.call_mut(Args::from_value_slice(args));
         self.exts.insert(name.into(), Box::new(f));
     }
+}
 
-    pub fn run_gene(
-        &mut self,
-        prog: &Program,
-        env: &mut CellEnv,
-        vars: &mut RuntimeVars,
-        gene_id: GeneId,
-    ) {
-        vars.clear();
+pub fn run_gene(
+    ctx: &mut ProgramContext,
+    prog: &Program,
+    env: &mut CellEnv,
+    vars: &mut RuntimeVars,
+    gene_id: GeneId,
+) {
+    vars.clear();
 
-        let gene = &prog[gene_id];
+    let gene = &prog[gene_id];
 
-        for (bind, bind_ty) in &gene.binds {
-            env.apply_non_moving_bind(bind, bind_ty, vars);
-        }
+    for (bind, rec) in &gene.binds {
+        env.apply_non_moving_bind(bind, *rec, vars);
+    }
 
-        for stmt_id in &gene.body {
-            let stmt = &prog[*stmt_id];
-            match stmt {
-                hir::types::GeneStatement::Call { ext, arguments } => {
-                    let ext = &prog[*ext];
-                    let ext_fn = self
-                        .exts
-                        .get_mut(&ext.name.1)
-                        .unwrap_or_else(|| panic!("Unbound extern function {}", ext.name.1));
+    for stmt_id in &gene.body {
+        let stmt = &prog[*stmt_id];
+        match stmt {
+            hir::types::GeneStatement::Call { ext, arguments } => {
+                let ext = &prog[*ext];
+                let ext_fn = ctx
+                    .exts
+                    .get_mut(&ext.name.1)
+                    .unwrap_or_else(|| panic!("Unbound extern function {}", ext.name.1));
 
-                    let fn_args = arguments
-                        .iter()
-                        .map(|id| eval_expr(prog, vars, *id).unwrap())
-                        .collect::<Vec<_>>();
+                let fn_args = arguments
+                    .iter()
+                    .map(|id| eval_expr(prog, vars, *id).unwrap())
+                    .collect::<Vec<_>>();
 
-                    (ext_fn)(&fn_args[..]);
-                }
-                hir::types::GeneStatement::Express(prod) => {
-                    eval_product(prog, env, vars, prod);
-                }
+                (ext_fn)(&fn_args[..]);
+            }
+            hir::types::GeneStatement::Express(prod) => {
+                eval_product(prog, env, vars, prod);
             }
         }
     }
-
-    pub fn run_enzymes(
-        &mut self,
-        prog: &Program,
-        env: &mut CellEnv,
-        vars: &mut RuntimeVars,
-        enzymes: impl Iterator<Item = (EnzymeId, usize)>,
-    ) -> bool {
-        let mut ran_any = false;
-        for (id, n) in enzymes {
-            let enzyme = &prog[id];
-            run_enzyme(prog, env, vars, n, enzyme);
-            ran_any = true;
-        }
-        ran_any
-    }
 }
 
-fn run_enzyme(
+pub fn run_rules(
+    prog: &Program,
+    env: &mut CellEnv,
+    vars: &mut RuntimeVars,
+    rules: impl Iterator<Item = (RuleId, usize)>,
+) -> bool {
+    let mut ran_any = false;
+    for (id, n) in rules {
+        let rule = &prog[id];
+        run_rule(prog, env, vars, n, rule);
+        ran_any = true;
+    }
+    ran_any
+}
+
+fn run_rule(
     prog: &Program,
     env: &mut CellEnv,
     vars: &mut RuntimeVars,
     quantity: usize,
-    enzyme: &Enzyme,
+    rule: &Rule,
 ) {
     for _ in 0..quantity {
         vars.clear();
-        for (bind, bind_ty) in &enzyme.binds {
-            env.apply_moving_bind(bind, bind_ty, vars);
+        for (bind, rec) in &rule.binds {
+            env.apply_moving_bind(bind, *rec, vars);
         }
 
-        for prod in &enzyme.products {
+        for prod in &rule.products {
             eval_product(prog, env, vars, prod);
         }
     }
 }
 
 fn eval_product(prog: &Program, env: &mut CellEnv, vars: &RuntimeVars, prod: &Product) {
-    match prod {
-        Product::Enzyme { quantity, enzyme } => {
-            env.add_enzyme(*quantity, *enzyme);
-        }
-        Product::Record {
-            quantity,
-            record,
-            arguments,
-        } => {
-            let fields = arguments
-                .iter()
-                .map(|id| eval_expr(prog, vars, *id).unwrap())
-                .collect::<Vec<_>>();
+    let fields = prod
+        .arguments
+        .iter()
+        .map(|id| eval_expr(prog, vars, *id).unwrap())
+        .collect::<Vec<_>>();
 
-            env.add_record(*quantity, *record, fields);
-        }
-    }
+    env.add_record(prod.quantity, prod.record, fields);
 }
 
 fn eval_expr(prog: &Program, vars: &RuntimeVars, id: ExpressionId) -> Option<Value> {
@@ -196,7 +185,6 @@ impl RuntimeVars {
 #[derive(Default, Debug)]
 pub struct CellEnv {
     pub records: HashMap<RecordId, Vec<RecordFields>>,
-    pub enzymes: HashMap<EnzymeId, usize>,
 }
 
 impl CellEnv {
@@ -204,10 +192,6 @@ impl CellEnv {
         sum.clear();
         for (id, v) in &self.records {
             sum.records.insert(*id, v.len());
-        }
-
-        for (id, n) in &self.enzymes {
-            sum.enzymes.insert(*id, *n);
         }
     }
 
@@ -217,52 +201,26 @@ impl CellEnv {
         recs.extend(std::iter::repeat(fields).take(quantity));
     }
 
-    pub fn add_enzyme(&mut self, quantity: usize, enzyme_id: EnzymeId) {
-        let count = self.enzymes.entry(enzyme_id).or_default();
-        *count += quantity;
-    }
-
-    pub fn apply_moving_bind(&mut self, bind: &Bind, bind_ty: &BindType, vars: &mut RuntimeVars) {
+    pub fn apply_moving_bind(&mut self, bind: &Bind, record: RecordId, vars: &mut RuntimeVars) {
         let mut rng = rand::thread_rng();
 
-        match bind_ty {
-            BindType::Record(id) => {
-                let recs = self.records.get_mut(id).unwrap();
-                match bind {
-                    Bind::None => {
-                        debug_assert_eq!(recs.len(), 0);
-                    }
-                    Bind::Quantity(n) => {
-                        debug_assert!(recs.len() >= *n);
-                        for _ in 0..*n {
-                            let idx = rng.gen_range(0..recs.len());
-                            let _ = recs.swap_remove(idx);
-                        }
-                    }
-                    Bind::Named(name) => {
-                        let idx = rng.gen_range(0..recs.len());
-
-                        let fields = recs.swap_remove(idx);
-                        vars.insert(name.1.clone(), Value::Record(fields));
-                    }
+        let recs = self.records.get_mut(&record).unwrap();
+        match bind {
+            Bind::None => {
+                debug_assert_eq!(recs.len(), 0);
+            }
+            Bind::Quantity(n) => {
+                debug_assert!(recs.len() >= *n);
+                for _ in 0..*n {
+                    let idx = rng.gen_range(0..recs.len());
+                    let _ = recs.swap_remove(idx);
                 }
             }
-            BindType::Enzyme(id) => {
-                let enzys = self.enzymes.get_mut(id).unwrap();
-                match bind {
-                    Bind::None => {
-                        debug_assert_eq!(*enzys, 0);
-                    }
-                    Bind::Quantity(n) => {
-                        debug_assert!(*enzys >= *n);
-                        *enzys -= *n;
-                    }
-                    Bind::Named(name) => {
-                        debug_assert!(*enzys >= 1);
-                        *enzys -= 1;
-                        vars.insert(name.1.clone(), Value::Enzyme);
-                    }
-                }
+            Bind::Named(name) => {
+                let idx = rng.gen_range(0..recs.len());
+
+                let fields = recs.swap_remove(idx);
+                vars.insert(name.1.clone(), Value::Record(fields));
             }
         }
     }
@@ -270,44 +228,25 @@ impl CellEnv {
     pub fn apply_non_moving_bind(
         &mut self,
         bind: &Bind,
-        bind_ty: &BindType,
+        record_id: RecordId,
         vars: &mut RuntimeVars,
     ) {
         let mut rng = rand::thread_rng();
 
-        match bind_ty {
-            BindType::Record(id) => {
-                let empty_vec = vec![];
-                let recs = self.records.get(id).unwrap_or(&empty_vec);
-                match bind {
-                    Bind::None => {
-                        debug_assert_eq!(recs.len(), 0);
-                    }
-                    Bind::Quantity(n) => {
-                        debug_assert!(recs.len() >= *n);
-                    }
-                    Bind::Named(name) => {
-                        let idx = rng.gen_range(0..recs.len());
-
-                        let fields = recs[idx].clone();
-                        vars.insert(name.1.clone(), Value::Record(fields));
-                    }
-                }
+        let empty_vec = vec![];
+        let recs = self.records.get(&record_id).unwrap_or(&empty_vec);
+        match bind {
+            Bind::None => {
+                debug_assert_eq!(recs.len(), 0);
             }
-            BindType::Enzyme(id) => {
-                let enzys = self.enzymes.get(id).unwrap_or(&0);
-                match bind {
-                    Bind::None => {
-                        debug_assert_eq!(*enzys, 0);
-                    }
-                    Bind::Quantity(n) => {
-                        debug_assert!(*enzys >= *n);
-                    }
-                    Bind::Named(name) => {
-                        debug_assert!(*enzys >= 1);
-                        vars.insert(name.1.clone(), Value::Enzyme);
-                    }
-                }
+            Bind::Quantity(n) => {
+                debug_assert!(recs.len() >= *n);
+            }
+            Bind::Named(name) => {
+                let idx = rng.gen_range(0..recs.len());
+
+                let fields = recs[idx].clone();
+                vars.insert(name.1.clone(), Value::Record(fields));
             }
         }
     }
@@ -316,22 +255,15 @@ impl CellEnv {
 #[derive(Default, Debug)]
 pub struct CellEnvSummary {
     pub records: HashMap<RecordId, usize>,
-    pub enzymes: HashMap<EnzymeId, usize>,
 }
 
 impl CellEnvSummary {
     pub fn clear(&mut self) {
         self.records.clear();
-        self.enzymes.clear();
     }
 
-    pub fn check_bind(&self, bind: &Bind, bind_ty: &BindType) -> bool {
-        let have_opt = match bind_ty {
-            BindType::Record(id) => self.records.get(id),
-            BindType::Enzyme(id) => self.enzymes.get(id),
-        };
-
-        let have = have_opt.copied().unwrap_or(0);
+    pub fn check_bind(&self, bind: &Bind, record_id: RecordId) -> bool {
+        let have = self.records.get(&record_id).copied().unwrap_or(0);
 
         match bind {
             Bind::None => have == 0,
@@ -340,11 +272,8 @@ impl CellEnvSummary {
         }
     }
 
-    pub fn commit_bind(&mut self, bind: &Bind, bind_ty: &BindType) {
-        let have_opt = match bind_ty {
-            BindType::Record(id) => self.records.get_mut(id),
-            BindType::Enzyme(id) => self.enzymes.get_mut(id),
-        };
+    pub fn commit_bind(&mut self, bind: &Bind, record_id: RecordId) {
+        let have_opt = self.records.get_mut(&record_id);
 
         let have = if let Some(n) = have_opt {
             n
@@ -371,42 +300,29 @@ impl CellEnvSummary {
 #[derive(Default, Debug)]
 pub struct ExecutionPlan {
     genes: Vec<GeneId>,
-    enzymes: Vec<EnzymeId>,
+    rules: Vec<RuleId>,
 
     eligable_genes: Vec<GeneId>,
 
-    eligable_enzyme_ids: Vec<EnzymeId>,
-    eligable_enzymes: HashMap<EnzymeId, usize>,
+    eligable_rule_ids: Vec<RuleId>,
+    eligable_rules: HashMap<RuleId, usize>,
 }
 
 impl ExecutionPlan {
     fn clear(&mut self) {
         self.genes.clear();
-        self.enzymes.clear();
+        self.rules.clear();
 
         self.eligable_genes.clear();
-        self.eligable_enzyme_ids.clear();
-        self.eligable_enzymes.clear();
-    }
-
-    fn shuffle(&mut self) {
-        let mut rng = rand::thread_rng();
-        self.genes.shuffle(&mut rng);
-        self.enzymes.shuffle(&mut rng);
+        self.eligable_rule_ids.clear();
+        self.eligable_rules.clear();
     }
 
     pub fn prepare_gene_execution(&mut self, prog: &Program, summ: &mut CellEnvSummary) {
         self.clear();
 
         self.genes.extend(prog.genes.iter().map(|(id, _)| id));
-        self.enzymes.extend(
-            prog.enzymes
-                .iter()
-                .map(|(id, _)| id)
-                .filter(|id| summ.enzymes.get(id).copied().unwrap_or(0) > 0),
-        );
-
-        self.shuffle();
+        self.genes.shuffle(&mut rand::thread_rng());
 
         self.eligable_genes.extend(
             self.genes
@@ -415,32 +331,25 @@ impl ExecutionPlan {
         );
     }
 
-    pub fn prepare_enzyme_execution(&mut self, prog: &Program, summ: &mut CellEnvSummary) {
+    pub fn prepare_rule_execution(&mut self, prog: &Program, summ: &mut CellEnvSummary) {
         self.clear();
 
-        self.genes.extend(prog.genes.iter().map(|(id, _)| id));
-        self.enzymes.extend(
-            prog.enzymes
+        self.rules.extend(prog.rules.iter().map(|(id, _)| id));
+        self.rules.shuffle(&mut rand::thread_rng());
+
+        self.eligable_rule_ids.extend(
+            self.rules
                 .iter()
-                .map(|(id, _)| id)
-                .filter(|id| summ.enzymes.get(id).copied().unwrap_or(0) > 0),
+                .filter(|id| is_rule_eligable(&prog[**id], summ)),
         );
 
-        self.shuffle();
-
-        self.eligable_enzyme_ids.extend(
-            self.enzymes
-                .iter()
-                .filter(|id| is_enzyme_eligable(&prog[**id], summ)),
-        );
-
-        // all enzymes can "run" at least once.
-        self.eligable_enzymes
-            .extend(self.eligable_enzyme_ids.iter().map(|x| (*x, 1)));
+        // all rules can "run" at least once.
+        self.eligable_rules
+            .extend(self.eligable_rule_ids.iter().map(|x| (*x, 1)));
 
         {
             let mut rng = rand::thread_rng();
-            let mut still_eligable = self.eligable_enzyme_ids.clone();
+            let mut still_eligable = self.eligable_rule_ids.clone();
             let mut to_remove = vec![];
 
             loop {
@@ -451,8 +360,8 @@ impl ExecutionPlan {
                 still_eligable.shuffle(&mut rng);
 
                 for (idx, id) in still_eligable.iter().enumerate() {
-                    if is_enzyme_eligable(&prog[*id], summ) {
-                        *self.eligable_enzymes.get_mut(id).unwrap() += 1;
+                    if is_rule_eligable(&prog[*id], summ) {
+                        *self.eligable_rules.get_mut(id).unwrap() += 1;
                     } else {
                         to_remove.push(idx);
                     }
@@ -471,8 +380,8 @@ impl ExecutionPlan {
         self.eligable_genes.iter().copied()
     }
 
-    pub fn eligable_enzymes(&self) -> impl Iterator<Item = (EnzymeId, usize)> + '_ {
-        self.eligable_enzymes
+    pub fn eligable_rules(&self) -> impl Iterator<Item = (RuleId, usize)> + '_ {
+        self.eligable_rules
             .iter()
             .map(|(i, n)| (*i, *n))
             .filter(|(_, n)| *n > 0)
@@ -480,28 +389,28 @@ impl ExecutionPlan {
 }
 
 fn is_gene_eligable(gene: &Gene, summ: &mut CellEnvSummary) -> bool {
-    for (bind, ty) in &gene.binds {
-        if !summ.check_bind(bind, ty) {
+    for (bind, rec) in &gene.binds {
+        if !summ.check_bind(bind, *rec) {
             return false;
         }
     }
 
-    for (bind, ty) in &gene.binds {
-        summ.commit_bind(bind, ty);
+    for (bind, rec) in &gene.binds {
+        summ.commit_bind(bind, *rec);
     }
 
     true
 }
 
-fn is_enzyme_eligable(enz: &Enzyme, summ: &mut CellEnvSummary) -> bool {
-    for (bind, ty) in &enz.binds {
-        if !summ.check_bind(bind, ty) {
+fn is_rule_eligable(rule: &Rule, summ: &mut CellEnvSummary) -> bool {
+    for (bind, rec) in &rule.binds {
+        if !summ.check_bind(bind, *rec) {
             return false;
         }
     }
 
-    for (bind, ty) in &enz.binds {
-        summ.commit_bind(bind, ty);
+    for (bind, rec) in &rule.binds {
+        summ.commit_bind(bind, *rec);
     }
 
     true

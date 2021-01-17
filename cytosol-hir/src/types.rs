@@ -8,7 +8,6 @@ pub enum Type {
     Int,
     String,
     Record(RecordId),
-    Enzyme(EnzymeId),
 }
 
 pub type RecordId = Id<Record>;
@@ -23,16 +22,10 @@ pub struct Record {
 pub type FieldIndex = usize;
 
 #[derive(Debug)]
-pub enum Product {
-    Enzyme {
-        quantity: usize,
-        enzyme: EnzymeId,
-    },
-    Record {
-        quantity: usize,
-        record: RecordId,
-        arguments: Vec<ExpressionId>,
-    },
+pub struct Product {
+    pub quantity: usize,
+    pub record: RecordId,
+    pub arguments: Vec<ExpressionId>,
 }
 
 #[derive(Debug)]
@@ -42,18 +35,11 @@ pub enum Bind {
     Named(Identifier),
 }
 
-#[derive(Debug)]
-pub enum BindType {
-    Record(RecordId),
-    Enzyme(EnzymeId),
-}
-
-pub type EnzymeId = Id<Enzyme>;
+pub type RuleId = Id<Rule>;
 
 #[derive(Debug)]
-pub struct Enzyme {
-    pub name: Identifier,
-    pub binds: Vec<(Bind, BindType)>,
+pub struct Rule {
+    pub binds: Vec<(Bind, RecordId)>,
     pub products: Vec<Product>,
 }
 
@@ -70,7 +56,7 @@ pub type GeneId = Id<Gene>;
 
 #[derive(Debug)]
 pub struct Gene {
-    pub binds: Vec<(Bind, BindType)>,
+    pub binds: Vec<(Bind, RecordId)>,
     pub body: Vec<GeneStatementId>,
 }
 

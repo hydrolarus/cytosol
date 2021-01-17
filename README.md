@@ -11,7 +11,7 @@ An embeddable programming language somewhat resembling cellular processes.
 
 ## Overview of the language
 
-> Records in the environment can activate gene functions or enzymes. Gene functions can express new record or enzymes into the environment. Enzymes can modify the records in the environment.
+> Records in the environment can activate gene functions or trigger rules. Gene functions can express new record into the environment. Rules can modify the records in the environment.
 
 ### `record`s
 
@@ -31,13 +31,13 @@ record Student(final_grade: int, info: PersonInfo)
 
 ### Environment
 
-The environment is a large unsorted set of `record`s and `enzyme`s. Records and enzymes can be added or removed from the environment.
+The environment is a large unsorted set of `record`s. Records can be added or removed from the environment.
 
-To check or bind to a record or enzyme in the environment they need to be in the "execution factor" list of `gene` functions or in the "reactant list" of `enzyme`s.
+To check or bind to a record in the environment they need to be in the "execution factor" list of `gene` functions or in the "reactant list" of `rule`s.
 
 A `cytosol` program can only add new things into the environment by using the `express` statement in `gene` functions.
 
-The "host application" that manages the execution of `cytosol` program can also inject or remove `record`s or `enzyme`s freely.
+The "host application" that manages the execution of `cytosol` program can also inject or remove `record`s freely.
 
 ### `gene` functions
 
@@ -50,27 +50,27 @@ gene [2 A, 4 B, 0 C]
 }
 ```
 
-The execution factor list is enclosed by `[` and `]`. An execution factor is an `record` or `enzyme` that is required to be in the "environment". Only when all execution factors are met/available will the body of the `gene` function run.
+The execution factor list is enclosed by `[` and `]`. An execution factor is a `record` that is required to be in the "environment". Only when all execution factors are met/available will the body of the `gene` function run.
 
-A number in front of the name of an `record` or `enzyme` signifies the quantity that needs to be available in the environment.
-The quantity `0` means that the `record` or `enzyme` must *not* be present in order to run the body of the `gene` function.
+A number in front of the name of a `record` signifies the quantity that needs to be available in the environment.
+The quantity `0` means that the `record` must *not* be present in order to run the body of the `gene` function.
 
-An execution factor can be bound to a variable by using `name: TypeName`. This will bind **1** `record` or `enzyme` to the variable name.
+An execution factor can be bound to a variable by using `name: TypeName`. This will bind **1** `record` to the variable name.
 
 The body can contain a list of a statement, which at the moment can only be
-- the `express` statement to add new `record`s or `enzyme`s into the environment. For example `express 3 A` will place 3 new "`A`" `record`s or `enzyme`s into the environment.
+- the `express` statement to add new `record`s into the environment. For example `express 3 A` will place 3 new "`A`" `record`s into the environment.
 - the `call` statement used to communicate with the host application
 
-### `enzyme` functions
+### `rule`s
 
-`enzyme` functions can modify the environment by transforming a set of `record`s or `enzyme`s into a new set of `record`s or `enzyme`s.
+`rule`s can modify the environment by transforming a set of `record`s into a new set of `record`s.
 
-An `enzyme` function has a "reactant list", which states the part of the environment needing to be present for the `enzyme` to perform its function.
+An `rule` has a "reactant list", which states the part of the environment needing to be present for the `rule` to perform its function.
 
 With all the reactants available the "product list" will be inserted into the environment and all the reactants will be removed.
 
 ```
-enzyme MakeWater[4 Hydrogen, 2 Oxygen] -> 2 Water
+rule [4 Hydrogen, 2 Oxygen] -> 2 Water
 ```
 
 Just like with the "execution factor list" of `gene` functions, reactants can have a quantity or be bound to a variable name.

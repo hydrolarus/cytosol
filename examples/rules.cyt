@@ -19,5 +19,8 @@ gene [A]
     express RemoveA
 }
 
-enzyme RemoveStart[Start, StartInhibitor] -> nothing
-enzyme RemoveA[A] -> nothing
+record RemoveStart
+record RemoveA
+
+rule [RemoveStart, Start, StartInhibitor] -> RemoveStart
+rule [RemoveA, A] -> RemoveA

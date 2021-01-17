@@ -3,8 +3,8 @@ use pretty::RcDoc as Doc;
 use cytosol::{
     parser::Token,
     syntax::{
-        Binding, BindingAttribute, Enzyme, Expression, Extern, File, Gene, GeneStatement,
-        Identifier, InfixOperator, Literal, PrefixOperator, Product, Record, Type,
+        Binding, BindingAttribute, Expression, Extern, File, Gene, GeneStatement, Identifier,
+        InfixOperator, Literal, PrefixOperator, Product, Record, Rule, Type,
     },
 };
 
@@ -55,7 +55,7 @@ impl ToDoc for File {
                     .append(Doc::hardline())
                     .append(self.genes.to_doc())
                     .append(Doc::hardline())
-                    .append(self.enzymes.to_doc().group())
+                    .append(self.rules.to_doc().group())
                     .append(Doc::hardline())
                     .append(self.externs.to_doc().group())
                     .nest(4)
@@ -137,13 +137,11 @@ impl ToDoc for Gene {
     }
 }
 
-impl ToDoc for Enzyme {
+impl ToDoc for Rule {
     fn to_doc(&self) -> Doc {
-        Doc::text("(enzyme")
+        Doc::text("(rule")
             .append(
                 Doc::line()
-                    .append(self.name.to_doc())
-                    .append(Doc::line())
                     .append(self.reactants.to_doc())
                     .append(Doc::line())
                     .append(self.products.to_doc())
