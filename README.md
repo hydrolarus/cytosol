@@ -11,7 +11,7 @@ An embeddable programming language somewhat resembling cellular processes.
 
 ## Overview of the language
 
-> Records in the environment can activate gene functions or trigger rules. Gene functions can express new record into the environment. Rules can modify the records in the environment.
+> Records in the environment can activate gene functions or trigger rules. Gene functions can express new records into the environment. Rules can modify the records in the environment.
 
 ### `record`s
 
@@ -65,7 +65,7 @@ The body can contain a list of a statement, which at the moment can only be
 
 `rule`s can modify the environment by transforming a set of `record`s into a new set of `record`s.
 
-An `rule` has a "reactant list", which states the part of the environment needing to be present for the `rule` to perform its function.
+A `rule` has a "reactant list", which states the part of the environment needing to be present for the `rule` to perform its function.
 
 With all the reactants available the "product list" will be inserted into the environment and all the reactants will be removed.
 
