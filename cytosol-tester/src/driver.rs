@@ -82,9 +82,11 @@ impl Driver for TestDriver {
         exec_state: &mut DriverExecutionState,
         env: &mut CellEnv,
     ) -> RunResult {
-        let gene_res = exec_state.run_gene_stage(prog, env);
-        let enzyme_res = exec_state.run_enzyme_stage(prog, env);
+        self.perf.record(ProgramStage::Execution, || {
+            let gene_res = exec_state.run_gene_stage(prog, env);
+            let enzyme_res = exec_state.run_enzyme_stage(prog, env);
 
-        gene_res.and_then(enzyme_res)
+            gene_res.and_then(enzyme_res)
+        })
     }
 }

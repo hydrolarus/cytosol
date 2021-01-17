@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeMap,
+    collections::{btree_map::Entry, BTreeMap},
     io::Write,
     time::{Duration, Instant},
     writeln,
@@ -113,6 +113,7 @@ impl FileSummary {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum ProgramStage {
     AstToHir,
+    Execution,
 }
 
 #[derive(Default)]
@@ -134,13 +135,21 @@ impl PerformanceReport {
         let stats_after = crate::INSTRUMENTED_SYSTEM.stats();
         let time = end.duration_since(start);
         let allocation_stats = stats_after - stats_before;
-        self.entries.insert(
-            stage,
-            Measurement {
-                time,
-                allocation_stats,
-            },
-        );
+
+        let measurement = Measurement {
+            time,
+            allocation_stats,
+        };
+
+        match self.entries.entry(stage) {
+            Entry::Vacant(e) => {
+                e.insert(measurement);
+            }
+            Entry::Occupied(mut e) => {
+                let new = e.get().sum(&measurement);
+                *e.get_mut() = new;
+            }
+        }
         res
     }
 
