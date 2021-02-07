@@ -153,6 +153,13 @@ pub extern "C" fn cyt_driver_runner_run(
 // Values
 //
 
+#[repr(C)]
+pub enum ValueType {
+    Integer,
+    String,
+    Record,
+}
+
 pub struct Value(cytosol::runtime::value::Value);
 
 #[no_mangle]
@@ -195,6 +202,16 @@ pub extern "C" fn cyt_value_record_add_field(record: &mut Value, new_field: Box<
 #[no_mangle]
 pub extern "C" fn cyt_value_destroy(value: Box<Value>) {
     drop(value);
+}
+
+/// Get the type of the `value`.
+#[no_mangle]
+pub extern "C" fn cyt_value_get_type(value: &Value) -> ValueType {
+    match &value.0 {
+        cytosol::runtime::value::Value::Integer(_) => ValueType::Integer,
+        cytosol::runtime::value::Value::String(_) => ValueType::String,
+        cytosol::runtime::value::Value::Record(_) => ValueType::Record,
+    }
 }
 
 /// Get the integer value in `value` by writing it in `out_i`.

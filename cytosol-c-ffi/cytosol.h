@@ -12,6 +12,12 @@ typedef enum cyt_run_result {
         CYT_RUN_RESULT_NO_PROGRESS,
 } cyt_run_result;
 
+typedef enum cyt_value_type {
+        CYT_VALUE_TYPE_INTEGER,
+        CYT_VALUE_TYPE_STRING,
+        CYT_VALUE_TYPE_RECORD,
+} cyt_value_type;
+
 typedef struct cyt_cell_env cyt_cell_env;
 
 typedef struct cyt_driver_runner cyt_driver_runner;
@@ -107,6 +113,11 @@ void cyt_value_record_add_field(struct cyt_value *record,
                                 struct cyt_value *new_field);
 
 void cyt_value_destroy(struct cyt_value *value);
+
+/**
+ * Get the type of the `value`.
+ */
+enum cyt_value_type cyt_value_get_type(const struct cyt_value *value);
 
 /**
  * Get the integer value in `value` by writing it in `out_i`.
