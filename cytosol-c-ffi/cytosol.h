@@ -11,6 +11,8 @@ typedef struct cyt_driver_runner cyt_driver_runner;
 
 typedef struct cyt_program cyt_program;
 
+typedef struct cyt_value cyt_value;
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -38,6 +40,61 @@ void cyt_driver_runner_add_file_from_string(struct cyt_driver_runner *r,
  */
 bool cyt_driver_runner_compile(struct cyt_driver_runner *r,
                                struct cyt_program *prog);
+
+struct cyt_value *cyt_value_new_integer(ptrdiff_t n);
+
+/**
+ * # Safety
+ * `s` must be a valid pointer to a UTF-8 and NUL-terminated string.
+ */
+struct cyt_value *cyt_value_new_string(const char *s);
+
+struct cyt_value *cyt_value_new_record(void);
+
+/**
+ * Adds the `new_field` value to the record in `record`.
+ *
+ * If `record` is not a value created with `cyt_value_new_record` then this function has no effect.
+ *
+ * The `new_field` value will transfer ownership, so the `destroy` function *must not* be called
+ * on that value again.
+ */
+void cyt_value_record_add_field(struct cyt_value *record,
+                                struct cyt_value *new_field);
+
+void cyt_value_destroy(struct cyt_value *value);
+
+/**
+ * Get the integer value in `value` by writing it in `out_i`.
+ *
+ * If `value` is not an integer then `false` is returned, `true` otherwise.
+ */
+bool cyt_value_get_integer(const struct cyt_value *value, ptrdiff_t *out_i);
+
+/**
+ * Get the string value in `value` by writing a pointer to `out_ptr` and the length to `out_len`.
+ *
+ * The string is **NOT** NUL-terminated.
+ *
+ * If `value` is not a string then `false` is returned, `true` otherwise.
+ */
+bool cyt_value_get_string(const struct cyt_value *value,
+                          const char **out_ptr,
+                          size_t *out_len);
+
+/**
+ * Get a field value of the record in `value` at index `index` by creating a
+ * copy of the field and writing it to `out_value`.
+ *
+ * The value in `out_value` will be owned, so the `destroy` function needs to
+ * be called.
+ *
+ * If `value` is not a record or if `index` is out of bounds then `false` is
+ * returned, `true` otherwise.
+ */
+bool cyt_value_get_record_field(const struct cyt_value *value,
+                                size_t index,
+                                const struct cyt_value **out_value);
 
 #ifdef __cplusplus
 } // extern "C"
