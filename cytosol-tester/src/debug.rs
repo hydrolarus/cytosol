@@ -8,7 +8,7 @@ use cytosol::{
     },
 };
 
-pub(crate) fn dump_tokens(toks: &[Token]) {
+pub(crate) fn dump_tokens<'a>(toks: impl Iterator<Item = Token<'a>>) {
     for tok in toks {
         eprintln!("{:?}", tok.kind);
     }

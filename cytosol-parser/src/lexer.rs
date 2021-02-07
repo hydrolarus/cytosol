@@ -81,26 +81,15 @@ pub enum TokenKind<'src> {
     Error,
 }
 
-pub fn tokenise(file: FileId, input: &str) -> Result<Vec<Token<'_>>, FC> {
-    let toks: Vec<Token<'_>> = TokenKind::lexer(input)
-        .spanned()
-        .map(move |(tok, span)| {
-            let fc = FC {
-                file,
-                start: span.start,
-                end: span.end,
-            };
-            Token { kind: tok, fc }
-        })
-        .collect();
-
-    for tok in &toks {
-        if tok.kind == TokenKind::Error {
-            return Err(tok.fc);
-        }
-    }
-
-    Ok(toks)
+pub fn tokenise(file: FileId, input: &str) -> impl Iterator<Item = Token<'_>> {
+    TokenKind::lexer(input).spanned().map(move |(tok, span)| {
+        let fc = FC {
+            file,
+            start: span.start,
+            end: span.end,
+        };
+        Token { kind: tok, fc }
+    })
 }
 
 fn parse_integer_literal(s: &str) -> Option<usize> {
@@ -174,7 +163,7 @@ mod tests {
         let mut files = SimpleFiles::new();
         let id = files.add("<test>", input);
 
-        let toks = tokenise(id, input).unwrap();
+        let toks = tokenise(id, input).collect::<Vec<_>>();
         assert_eq!(toks.len(), 3);
         assert_eq!(
             toks[0].kind,
@@ -199,7 +188,7 @@ mod tests {
         let mut files = SimpleFiles::new();
         let id = files.add("<test>", input);
 
-        let toks = tokenise(id, input).unwrap();
+        let toks = tokenise(id, input).collect::<Vec<_>>();
         assert_eq!(toks.len(), 4);
         assert_eq!(toks[0].kind, TokenKind::IntegerLiteral(12));
         assert_eq!(toks[1].kind, TokenKind::IntegerLiteral(0));
@@ -214,7 +203,7 @@ mod tests {
         let mut files = SimpleFiles::new();
         let id = files.add("<test>", input);
 
-        let toks = tokenise(id, input).unwrap();
+        let toks = tokenise(id, input).collect::<Vec<_>>();
         assert_eq!(toks.len(), 1);
         assert_eq!(toks[0].kind, TokenKind::Identifier("A53α"));
     }

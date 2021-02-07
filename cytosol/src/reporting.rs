@@ -9,7 +9,7 @@ use codespan_reporting::{
     },
 };
 use cytosol_parser::ParseError;
-use cytosol_syntax::{FileId, FC};
+use cytosol_syntax::FileId;
 
 use cytosol_hir::{ast_to_hir::Error, Program};
 
@@ -19,23 +19,6 @@ fn colour_choice(coloured: bool) -> ColorChoice {
     } else {
         ColorChoice::Never
     }
-}
-
-pub(crate) fn report_lexing_error<'a>(
-    coloured: bool,
-    files: &'a impl Files<'a, FileId = FileId>,
-    fc: FC,
-) {
-    let file_source = files.source(fc.file).expect("Invalid file ID");
-    let source = &file_source.as_ref()[fc.start..fc.end];
-
-    let label = Label::primary(fc.file, fc.range());
-    let diag = Diagnostic::error()
-        .with_code("lexer-error")
-        .with_message(format!("Invalid token `{}`", source))
-        .with_labels(vec![label]);
-
-    emit(coloured, files, &[diag]);
 }
 
 pub(crate) fn report_parse_error<'a>(

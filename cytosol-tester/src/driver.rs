@@ -37,19 +37,15 @@ impl Driver for TestDriver {
     ) -> Result<File, CompileError> {
         let mut perf = FileSummary::new(file_name);
 
-        let toks = perf
-            .record(FileStage::Lexing, || {
-                cytosol::parser::tokenise(file_id, source)
-            })
-            .map_err(|fc| CompileError::Lexer { unknown_tok_fc: fc })?;
+        let toks = cytosol::parser::tokenise(file_id, source);
 
         if self.dump_tokens {
-            debug::dump_tokens(&toks);
+            debug::dump_tokens(cytosol::parser::tokenise(file_id, source));
         }
 
         let ast = perf
             .record(FileStage::Parsing, || {
-                cytosol::parser::parse_file(file_id, &toks)
+                cytosol::parser::parse_file(file_id, toks)
             })
             .map_err(CompileError::Parser)?;
 

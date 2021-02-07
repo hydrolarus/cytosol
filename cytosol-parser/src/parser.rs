@@ -1,3 +1,5 @@
+use std::iter::Peekable;
+
 use thiserror::Error;
 
 use cytosol_syntax::{
@@ -56,17 +58,20 @@ type Result<T> = core::result::Result<T, Error>;
 /// All tokens should be from the same file, so should have the same FileId.
 /// The `file` parameter is passed so that the FileID can be used even when the
 /// list of tokens is empty.
-pub fn parse_file<'src>(file: FileId, tokens: &'src [Token<'src>]) -> Result<File> {
-    let mut p = Parser { file, toks: tokens };
+pub fn parse_file<'src>(file: FileId, tokens: impl Iterator<Item = Token<'src>>) -> Result<File> {
+    let mut p = Parser {
+        file,
+        toks: tokens.peekable(),
+    };
     p.parse_file()
 }
 
-struct Parser<'src> {
+struct Parser<'src, I: Iterator<Item = Token<'src>>> {
     file: FileId,
-    toks: &'src [Token<'src>],
+    toks: Peekable<I>,
 }
 
-impl<'src> Parser<'src> {
+impl<'src, I: Iterator<Item = Token<'src>>> Parser<'src, I> {
     fn parse_file(&mut self) -> Result<File> {
         let mut file = File::default();
 
@@ -74,6 +79,7 @@ impl<'src> Parser<'src> {
             match t.kind {
                 TokenKind::Record => {
                     let start_tok = self.next().unwrap();
+                    let t = &start_tok;
                     let ec = CTX
                         .start(start_tok.fc, "record definition")
                         .while_parsing("a record definition");
@@ -219,9 +225,10 @@ impl<'src> Parser<'src> {
     }
 
     fn parse_gene_statement(&mut self, pec: ErrorContext) -> Result<GeneStatement> {
-        let next = self.peek().ok_or_else(|| {
-            Error::UnexpectedEnd(self.file, pec.while_parsing("a gene statement"))
-        })?;
+        let file = self.file;
+        let next = self
+            .peek()
+            .ok_or_else(|| Error::UnexpectedEnd(file, pec.while_parsing("a gene statement")))?;
 
         match next.kind {
             TokenKind::Call => {
@@ -272,13 +279,15 @@ impl<'src> Parser<'src> {
     }
 
     fn parse_product_list(&mut self, pec: ErrorContext) -> Result<(FC, Vec<Product>)> {
+        let file = self.file;
         let next = self
             .peek()
-            .ok_or_else(|| Error::UnexpectedEnd(self.file, pec.while_parsing("a product list")))?;
+            .ok_or_else(|| Error::UnexpectedEnd(file, pec.while_parsing("a product list")))?;
+        let start_fc = next.fc;
 
         if next.kind == TokenKind::Nothing {
             let _ = self.next();
-            return Ok((next.fc, vec![]));
+            return Ok((start_fc, vec![]));
         }
 
         self.separated(
@@ -286,7 +295,7 @@ impl<'src> Parser<'src> {
             pec.while_parsing("a product list"),
             |s| {
                 s.parse_product(
-                    CTX.start(next.fc, "product list")
+                    CTX.start(start_fc, "product list")
                         .while_parsing("a product list"),
                 )
             },
@@ -294,23 +303,26 @@ impl<'src> Parser<'src> {
     }
 
     fn parse_binding(&mut self, pec: ErrorContext) -> Result<Binding> {
+        let file = self.file;
         let ec = pec.while_parsing("a binding");
 
-        let next = self.peek().ok_or_else(|| {
-            Error::UnexpectedEnd(self.file, ec.expected("a quantity or identifier"))
-        })?;
+        let next = self
+            .peek()
+            .ok_or_else(|| Error::UnexpectedEnd(file, ec.expected("a quantity or identifier")))?;
+        let start_fc = next.fc;
 
         let ec = ec.start(next.fc, "binding");
 
         match &next.kind {
             TokenKind::IntegerLiteral(n) => {
+                let n = *n;
                 let _ = self.next();
-                let attr = BindingAttribute::Quantity(next.fc, *n);
+                let attr = BindingAttribute::Quantity(start_fc, n);
 
                 let name = self.parse_identifier(ec)?;
 
                 Ok(Binding {
-                    fc: next.fc.merge(name.fc()),
+                    fc: start_fc.merge(name.fc()),
                     name,
                     attr: Some(attr),
                 })
@@ -376,8 +388,10 @@ impl<'src> Parser<'src> {
             kind: TokenKind::IntegerLiteral(l),
         }) = self.peek()
         {
+            let fc = *fc;
+            let l = *l;
             let _ = self.next();
-            Some((*fc, *l))
+            Some((fc, l))
         } else {
             None
         };
@@ -449,22 +463,28 @@ impl<'src> Parser<'src> {
     }
 
     fn parse_expression_record(&mut self, pec: ErrorContext) -> Result<Expression> {
-        let next = self.peek().ok_or_else(|| {
-            Error::UnexpectedEnd(self.file, pec.while_parsing("an expression record"))
-        })?;
+        let file = self.file;
+
+        let next = self
+            .peek()
+            .ok_or_else(|| Error::UnexpectedEnd(file, pec.while_parsing("an expression record")))?;
+        let start_fc = next.fc;
 
         let mut expr = match &next.kind {
             TokenKind::Identifier(n) => {
+                let n = n.to_string();
                 let _ = self.next();
-                Expression::Variable(Identifier(next.fc, n.to_string()))
+                Expression::Variable(Identifier(start_fc, n))
             }
             TokenKind::IntegerLiteral(i) => {
+                let i = *i;
                 let _ = self.next();
-                Expression::Literal(Literal::Integer(next.fc, *i))
+                Expression::Literal(Literal::Integer(start_fc, i))
             }
             TokenKind::StringLiteral(s) => {
+                let s = s.clone();
                 let _ = self.next();
-                Expression::Literal(Literal::String(next.fc, s.clone()))
+                Expression::Literal(Literal::String(start_fc, s))
             }
             TokenKind::ParenOpen => {
                 let _ = self.next();
@@ -485,7 +505,7 @@ impl<'src> Parser<'src> {
             }
             _ => {
                 return Err(Error::UnexpectedToken(
-                    next.fc,
+                    start_fc,
                     pec.while_parsing("an expression record"),
                 ))
             }
@@ -511,12 +531,12 @@ impl<'src> Parser<'src> {
 }
 
 /// Utilities
-impl<'src> Parser<'src> {
-    fn peek(&self) -> Option<&'src Token<'src>> {
-        self.toks.first()
+impl<'src, I: Iterator<Item = Token<'src>>> Parser<'src, I> {
+    fn peek(&mut self) -> Option<&Token<'src>> {
+        self.toks.peek()
     }
 
-    fn peek_kind(&self, f: impl FnOnce(&'src TokenKind<'src>) -> bool) -> bool {
+    fn peek_kind(&mut self, f: impl FnOnce(&TokenKind<'src>) -> bool) -> bool {
         if let Some(tok) = self.peek() {
             f(&tok.kind)
         } else {
@@ -524,37 +544,31 @@ impl<'src> Parser<'src> {
         }
     }
 
-    fn next(&mut self) -> Option<&'src Token<'src>> {
-        match self.toks {
-            [tok, rest @ ..] => {
-                self.toks = rest;
-                Some(tok)
-            }
-            [] => None,
-        }
+    fn next(&mut self) -> Option<Token<'src>> {
+        self.toks.next()
     }
 
     fn expect<R: ExpectRet>(
         &mut self,
         context: ErrorContext,
-        f: impl FnOnce(&'src Token<'src>) -> R,
+        f: impl FnOnce(&Token<'src>) -> R,
     ) -> Result<R::Out> {
-        match self.toks {
-            [tok, rest @ ..] => match f(tok).as_result(context, tok.fc) {
+        match self.toks.peek() {
+            Some(tok) => match f(tok).as_result(context, tok.fc) {
                 Ok(val) => {
-                    self.toks = rest;
+                    let _ = self.toks.next();
                     Ok(val)
                 }
                 Err(err) => Err(err),
             },
-            [] => Err(Error::UnexpectedEnd(self.file, context)),
+            None => Err(Error::UnexpectedEnd(self.file, context)),
         }
     }
 
     fn expect_tok_and_fc<R: ExpectRet>(
         &mut self,
         context: ErrorContext,
-        f: impl FnOnce(&'src Token<'src>) -> R,
+        f: impl FnOnce(&Token<'src>) -> R,
     ) -> Result<(FC, R::Out)> {
         self.expect(context, |tok| {
             f(tok).as_result(context, tok.fc).map(|r| (tok.fc, r))
@@ -626,12 +640,11 @@ impl<'src> Parser<'src> {
         context: ErrorContext,
         mut f: impl FnMut(&mut Self) -> Result<T>,
     ) -> Result<(FC, Vec<T>)> {
+        let file = self.file;
+
         let mut vals = vec![];
 
-        let start_fc = &self
-            .peek()
-            .ok_or(Error::UnexpectedEnd(self.file, context))?
-            .fc;
+        let start_fc = self.peek().ok_or(Error::UnexpectedEnd(file, context))?.fc;
 
         vals.push(f(self)?);
 

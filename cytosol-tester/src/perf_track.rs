@@ -13,7 +13,6 @@ use cytosol::driver::FileName;
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum FileStage {
-    Lexing,
     Parsing,
 }
 

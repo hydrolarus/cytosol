@@ -6,7 +6,7 @@ use cytosol_parser::ParseError;
 use cytosol_runtime::{
     run_gene, run_rules, CellEnv, CellEnvSummary, ExecutionPlan, ProgramContext, RuntimeVars,
 };
-use cytosol_syntax::{File, FileId, FC};
+use cytosol_syntax::{File, FileId};
 
 use crate::reporting;
 
@@ -26,7 +26,6 @@ impl std::fmt::Display for FileName {
 }
 
 pub enum CompileError {
-    Lexer { unknown_tok_fc: FC },
     Parser(ParseError),
     AstToHir(Vec<AstToHirError>),
 }
@@ -113,9 +112,6 @@ impl<D: Driver> DriverRunner<D> {
 
     pub fn report_error(&self, prog: &Program, err: &CompileError, coloured_output: bool) {
         match err {
-            CompileError::Lexer { unknown_tok_fc } => {
-                reporting::report_lexing_error(coloured_output, &self.files, *unknown_tok_fc);
-            }
             CompileError::Parser(err) => {
                 reporting::report_parse_error(coloured_output, &self.files, err);
             }
@@ -183,10 +179,9 @@ impl Driver for DefaultDriver {
         file_id: FileId,
         source: &str,
     ) -> Result<File, CompileError> {
-        let toks = crate::parser::tokenise(file_id, source)
-            .map_err(|fc| CompileError::Lexer { unknown_tok_fc: fc })?;
+        let toks = crate::parser::tokenise(file_id, source);
 
-        crate::parser::parse_file(file_id, &toks).map_err(CompileError::Parser)
+        crate::parser::parse_file(file_id, toks).map_err(CompileError::Parser)
     }
 
     fn compile_files(&mut self, prog: &mut Program, files: &[File]) -> Result<(), CompileError> {
