@@ -70,6 +70,9 @@ renaming_overrides_prefixing = false
 "DriverRunner" = "driver_runner"
 "Value" = "value"
 "RecordId" = "record_id"
+"RunResult" = "run_result"
+"CellEnv" = "cell_env"
+"ExecutionState" = "exec_state"
 
 
 [export.body]
@@ -105,17 +108,17 @@ derive_gte = false
 
 
 [enum]
-rename_variants = "None"
+rename_variants = "ScreamingSnakeCase"
 # must_use = "MUST_USE_ENUM"
 add_sentinel = false
-prefix_with_name = false
+prefix_with_name = true
 derive_helper_methods = false
 derive_const_casts = false
 derive_mut_casts = false
 # cast_assert_name = "ASSERT"
 derive_tagged_enum_destructor = false
 derive_tagged_enum_copy_constructor = false
-enum_class = true
+enum_class = false
 private_default_tagged_enum_constructor = false
 
 

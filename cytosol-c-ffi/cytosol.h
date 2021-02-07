@@ -7,16 +7,16 @@
 #include <stdlib.h>
 
 
-typedef enum cyt_RunResult {
-        MadeProgress,
-        NoProgress,
-} cyt_RunResult;
+typedef enum cyt_run_result {
+        CYT_RUN_RESULT_MADE_PROGRESS,
+        CYT_RUN_RESULT_NO_PROGRESS,
+} cyt_run_result;
 
-typedef struct cyt_CellEnv cyt_CellEnv;
+typedef struct cyt_cell_env cyt_cell_env;
 
 typedef struct cyt_driver_runner cyt_driver_runner;
 
-typedef struct cyt_ExecutionState cyt_ExecutionState;
+typedef struct cyt_exec_state cyt_exec_state;
 
 typedef struct cyt_program cyt_program;
 
@@ -66,10 +66,10 @@ bool cyt_driver_runner_compile(struct cyt_driver_runner *r,
 /**
  * Run the program for one single iteration.
  */
-enum cyt_RunResult cyt_driver_runner_run_single_iteration(struct cyt_driver_runner *r,
-                                                          const struct cyt_program *prog,
-                                                          struct cyt_ExecutionState *exec_state,
-                                                          struct cyt_CellEnv *cell_env);
+enum cyt_run_result cyt_driver_runner_run_single_iteration(struct cyt_driver_runner *r,
+                                                           const struct cyt_program *prog,
+                                                           struct cyt_exec_state *exec_state,
+                                                           struct cyt_cell_env *cell_env);
 
 /**
  * Run the program for multiple iterations.
@@ -81,8 +81,8 @@ enum cyt_RunResult cyt_driver_runner_run_single_iteration(struct cyt_driver_runn
  */
 void cyt_driver_runner_run(struct cyt_driver_runner *r,
                            const struct cyt_program *prog,
-                           struct cyt_ExecutionState *exec_state,
-                           struct cyt_CellEnv *cell_env,
+                           struct cyt_exec_state *exec_state,
+                           struct cyt_cell_env *cell_env,
                            size_t iter_bound);
 
 struct cyt_value *cyt_value_new_integer(ptrdiff_t n);
@@ -140,9 +140,9 @@ bool cyt_value_get_record_field(const struct cyt_value *value,
                                 size_t index,
                                 const struct cyt_value **out_value);
 
-struct cyt_CellEnv *cyt_cellenv_new(void);
+struct cyt_cell_env *cyt_cellenv_new(void);
 
-void cyt_cellenv_destroy(struct cyt_CellEnv *cell_env);
+void cyt_cellenv_destroy(struct cyt_cell_env *cell_env);
 
 /**
  * Add a record with id `record_id` to the environment `quantity` times.
@@ -153,22 +153,22 @@ void cyt_cellenv_destroy(struct cyt_CellEnv *cell_env);
  * `fields` must be a valid pointer to an array of values allocated by the
  * `cyt_value_` functions with `num_fields` elements.
  */
-void cyt_cellenv_add_record(struct cyt_CellEnv *cell_env,
+void cyt_cellenv_add_record(struct cyt_cell_env *cell_env,
                             size_t quantity,
                             struct cyt_record_id record_id,
                             size_t num_fields,
                             const struct cyt_value *const *fields);
 
-struct cyt_ExecutionState *cyt_exec_state_new(void);
+struct cyt_exec_state *cyt_exec_state_new(void);
 
-void cyt_exec_state_destroy(struct cyt_ExecutionState *exec_state);
+void cyt_exec_state_destroy(struct cyt_exec_state *exec_state);
 
 /**
  * # Safety
  * `s` must be a valid pointer to a UTF-8 and NUL-terminated string.
  * `f` must be a valid function pointer.
  */
-void cyt_exec_state_set_extern_function(struct cyt_ExecutionState *exec_state,
+void cyt_exec_state_set_extern_function(struct cyt_exec_state *exec_state,
                                         const char *name,
                                         void (*f)(void*, size_t, const struct cyt_value*const *),
                                         void *data);
