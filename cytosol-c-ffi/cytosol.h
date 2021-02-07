@@ -62,6 +62,19 @@ void cyt_driver_runner_add_file_from_string(struct cyt_driver_runner *r,
                                             const char *source);
 
 /**
+ * Load a file from a path
+ *
+ * When the loading was successful, `0` is returned.
+ * If an error occured then the OS error code will be returned.
+ * If there was an error but no OS error code is present then `-1` will be returned.
+ *
+ * # Safety
+ * `path` must be a pointer to a NUL-terminated string representing a path.
+ */
+int32_t cyt_driver_runner_add_file_from_path(struct cyt_driver_runner *r,
+                                             const char *path);
+
+/**
  * If an error occurs `false` is returned.
  * In that case the error will also be directly written to stdout.
  * If no error occurs then `true` is returned.

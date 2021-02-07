@@ -83,6 +83,29 @@ pub unsafe extern "C" fn cyt_driver_runner_add_file_from_string(
     );
 }
 
+/// Load a file from a path
+///
+/// When the loading was successful, `0` is returned.
+/// If an error occured then the OS error code will be returned.
+/// If there was an error but no OS error code is present then `-1` will be returned.
+///
+/// # Safety
+/// `path` must be a pointer to a NUL-terminated string representing a path.
+#[no_mangle]
+pub unsafe extern "C" fn cyt_driver_runner_add_file_from_path(
+    r: &mut DriverRunner,
+    path: *const std::os::raw::c_char,
+) -> i32 {
+    let name_cstr = CStr::from_ptr(path);
+    match r
+        .0
+        .add_file_from_path(name_cstr.to_string_lossy().into_owned())
+    {
+        Ok(_) => 0,
+        Err(err) => err.raw_os_error().unwrap_or(-1),
+    }
+}
+
 /// If an error occurs `false` is returned.
 /// In that case the error will also be directly written to stdout.
 /// If no error occurs then `true` is returned.
