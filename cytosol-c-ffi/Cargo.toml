@@ -11,6 +11,7 @@ crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
 cytosol = { path = "../cytosol" }
+id-arena = "2.2.1"
 
 [build-dependencies]
 cbindgen = "0.17.0"
