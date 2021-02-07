@@ -7,4 +7,6 @@ members = [
 
     "cytosol",
     "cytosol-tester",
+
+    "cytosol-c-ffi",
 ]

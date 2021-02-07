@@ -25,13 +25,23 @@ impl ProgramContext {
         Self::default()
     }
 
+    pub fn set_extern_function_raw(
+        &mut self,
+        name: impl Into<String>,
+        mut f: impl FnMut(&[Value]) + 'static,
+    ) {
+        let f = move |args: &[Value]| f(args);
+        self.exts.insert(name.into(), Box::new(f));
+    }
+
     pub fn set_extern_function<Args, F>(&mut self, name: impl Into<String>, mut f: F)
     where
         for<'a> Args: FromValueSlice<'a>,
         for<'a> F: fn_ops::FnMut<Args, Output = ()> + 'static,
     {
-        let f = move |args: &[Value]| f.call_mut(Args::from_value_slice(args));
-        self.exts.insert(name.into(), Box::new(f));
+        self.set_extern_function_raw(name, move |args: &[Value]| {
+            f.call_mut(Args::from_value_slice(args))
+        })
     }
 }
 
