@@ -183,6 +183,9 @@ void cyt_cellenv_add_record(struct cyt_cell_env *cell_env,
                             size_t num_fields,
                             const struct cyt_value *const *fields);
 
+size_t cyt_cellenv_count_records(const struct cyt_cell_env *cell_env,
+                                 struct cyt_record_id record_id);
+
 struct cyt_exec_state *cyt_exec_state_new(void);
 
 void cyt_exec_state_destroy(struct cyt_exec_state *exec_state);

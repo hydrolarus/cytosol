@@ -338,6 +338,12 @@ pub unsafe extern "C" fn cyt_cellenv_add_record(
     cell_env.0.add_record(quantity, record_id.to_id(), fields)
 }
 
+#[no_mangle]
+pub extern "C" fn cyt_cellenv_count_records(cell_env: &CellEnv, record_id: RecordId) -> usize {
+    let id = record_id.to_id();
+    cell_env.0.count_records(id)
+}
+
 //
 // Execution state
 //

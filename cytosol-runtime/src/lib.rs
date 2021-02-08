@@ -211,6 +211,13 @@ impl CellEnv {
         recs.extend(std::iter::repeat(fields).take(quantity));
     }
 
+    pub fn count_records(&self, record_id: RecordId) -> usize {
+        self.records
+            .get(&record_id)
+            .map(|vals| vals.len())
+            .unwrap_or(0)
+    }
+
     pub fn apply_moving_bind(&mut self, bind: &Bind, record: RecordId, vars: &mut RuntimeVars) {
         let mut rng = rand::thread_rng();
 
