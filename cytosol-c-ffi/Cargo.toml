@@ -14,4 +14,4 @@ cytosol = { path = "../cytosol" }
 id-arena = "2.2.1"
 
 [build-dependencies]
-cbindgen = "0.17.0"
+cbindgen = { version = "0.17.0", default-features = false }
