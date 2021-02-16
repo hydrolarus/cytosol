@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ops::Index};
+use ahash::AHashMap as HashMap;
 
 use cytosol_syntax::{Identifier, FC};
 use id_arena::Arena;
@@ -251,7 +251,7 @@ impl Program {
 
 macro_rules! index_impl {
     ($tid:ty, $t:ty, $member:ident) => {
-        impl Index<$tid> for Program {
+        impl std::ops::Index<$tid> for Program {
             type Output = $t;
 
             fn index(&self, index: $tid) -> &Self::Output {

@@ -11,3 +11,4 @@ cytosol-syntax = { path = "../cytosol-syntax" }
 id-arena = "2"
 thiserror = "1"
 petgraph = "0.5"
+ahash = "0.7"

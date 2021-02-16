@@ -10,3 +10,4 @@ edition = "2018"
 cytosol-hir = { path = "../cytosol-hir" }
 fn_ops = "0.1.0"
 rand = "0.8"
+ahash = "0.7"
