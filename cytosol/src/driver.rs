@@ -25,6 +25,7 @@ impl std::fmt::Display for FileName {
     }
 }
 
+#[derive(Debug)]
 pub enum CompileError {
     Parser(ParseError),
     AstToHir(Vec<AstToHirError>),

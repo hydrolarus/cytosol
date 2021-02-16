@@ -6,9 +6,21 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+bench = false
+
 [dependencies]
 cytosol-syntax = { path = "../cytosol-syntax" }
 cytosol-parser = { path = "../cytosol-parser" }
 cytosol-hir = { path = "../cytosol-hir" }
 cytosol-runtime = { path = "../cytosol-runtime" }
 codespan-reporting = "0.11"
+
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "fib"
+harness = false
+path = "../benches/fib.rs"
