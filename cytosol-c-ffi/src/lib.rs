@@ -1,5 +1,6 @@
 use std::ffi::CStr;
 
+use cytosol::runtime::value::Value;
 use id_arena::ArenaBehavior;
 
 //
@@ -183,122 +184,130 @@ pub enum ValueType {
     Record,
 }
 
-pub struct Value(cytosol::runtime::value::Value);
+pub struct ValueBuffer(Vec<Value>);
 
 #[no_mangle]
-pub extern "C" fn cyt_value_new_integer(n: isize) -> Box<Value> {
-    Box::new(Value(cytosol::runtime::value::Value::Integer(n)))
+pub extern "C" fn cyt_value_buffer_new(size: usize) -> Box<ValueBuffer> {
+    Box::new(ValueBuffer(vec![Value::Integer(0); size]))
+}
+
+#[no_mangle]
+pub extern "C" fn cyt_value_buffer_get_size(buf: &ValueBuffer) -> usize {
+    buf.0.len()
+}
+
+#[no_mangle]
+pub extern "C" fn cyt_value_buffer_set_int(buf: &mut ValueBuffer, idx: usize, i: isize) {
+    if let Some(val) = buf.0.get_mut(idx) {
+        *val = Value::Integer(i);
+    }
 }
 
 /// # Safety
 /// `s` must be a valid pointer to a UTF-8 and NUL-terminated string.
 #[no_mangle]
-pub unsafe extern "C" fn cyt_value_new_string(s: *const std::os::raw::c_char) -> Box<Value> {
+pub unsafe extern "C" fn cyt_value_buffer_set_string(
+    buf: &mut ValueBuffer,
+    idx: usize,
+    s: *const std::os::raw::c_char,
+) {
     let cstr = CStr::from_ptr(s);
-    Box::new(Value(cytosol::runtime::value::Value::String(
-        cstr.to_string_lossy().into_owned(),
-    )))
+    if let Some(val) = buf.0.get_mut(idx) {
+        *val = Value::String(cstr.to_string_lossy().into_owned());
+    }
 }
 
+/// # Safety
+/// `fields` will be consumed, do **not** call the destructor on the value buffer
 #[no_mangle]
-pub extern "C" fn cyt_value_new_record() -> Box<Value> {
-    Box::new(Value(cytosol::runtime::value::Value::Record(vec![])))
-}
-
-/// Adds the `new_field` value to the record in `record`.
-///
-/// If `record` is not a value created with `cyt_value_new_record` then this function has no effect.
-///
-/// The `new_field` value will transfer ownership, so the `destroy` function *must not* be called
-/// on that value again.
-#[no_mangle]
-pub extern "C" fn cyt_value_record_add_field(record: &mut Value, new_field: Box<Value>) {
-    match &mut record.0 {
-        cytosol::runtime::value::Value::Integer(_) => {}
-        cytosol::runtime::value::Value::String(_) => {}
-        cytosol::runtime::value::Value::Record(fields) => {
-            fields.push(new_field.0);
-        }
+pub extern "C" fn cyt_value_buffer_set_record(
+    buf: &mut ValueBuffer,
+    idx: usize,
+    fields: Box<ValueBuffer>,
+) {
+    if let Some(val) = buf.0.get_mut(idx) {
+        *val = Value::Record(fields.0);
     }
 }
 
 #[no_mangle]
-pub extern "C" fn cyt_value_destroy(value: Box<Value>) {
-    drop(value);
+pub extern "C" fn cyt_value_buffer_destroy(buf: Box<ValueBuffer>) {
+    drop(buf);
 }
 
-/// Get the type of the `value`.
+/// Get the type of the value at index `idx`.
+///
+/// If the index is out of bounds then `Integer` will be returned.
 #[no_mangle]
-pub extern "C" fn cyt_value_get_type(value: &Value) -> ValueType {
-    match &value.0 {
-        cytosol::runtime::value::Value::Integer(_) => ValueType::Integer,
-        cytosol::runtime::value::Value::String(_) => ValueType::String,
-        cytosol::runtime::value::Value::Record(_) => ValueType::Record,
+pub extern "C" fn cyt_value_get_type(buf: &ValueBuffer, idx: usize) -> ValueType {
+    match buf.0.get(idx) {
+        Some(Value::Integer(_)) => ValueType::Integer,
+        Some(Value::String(_)) => ValueType::String,
+        Some(Value::Record(_)) => ValueType::Record,
+        None => ValueType::Integer,
     }
 }
 
-/// Get the integer value in `value` by writing it in `out_i`.
+/// Get the integer value in `buf` at `idx` by writing it in `out_i`.
 ///
-/// If `value` is not an integer then `false` is returned, `true` otherwise.
+/// If the value is not an integer then `false` is returned, `true` otherwise.
 #[no_mangle]
-pub extern "C" fn cyt_value_get_integer(value: &Value, out_i: &mut isize) -> bool {
-    match &value.0 {
-        cytosol::runtime::value::Value::Integer(v) => {
+pub extern "C" fn cyt_value_buffer_get_integer(
+    buf: &ValueBuffer,
+    idx: usize,
+    out_i: &mut isize,
+) -> bool {
+    match buf.0.get(idx) {
+        Some(Value::Integer(v)) => {
             *out_i = *v;
             true
         }
-        cytosol::runtime::value::Value::String(_) => false,
-        cytosol::runtime::value::Value::Record(_) => false,
+        _ => false,
     }
 }
 
-/// Get the string value in `value` by writing a pointer to `out_ptr` and the length to `out_len`.
+/// Get the string value in `buf` at `idx` by writing a pointer to `out_ptr`
+/// and the length to `out_len`.
 ///
 /// The string is **NOT** NUL-terminated.
 ///
-/// If `value` is not a string then `false` is returned, `true` otherwise.
+/// If the value is not a string then `false` is returned, `true` otherwise.
 #[no_mangle]
-pub extern "C" fn cyt_value_get_string(
-    value: &Value,
+pub extern "C" fn cyt_value_buffer_get_string(
+    buf: &ValueBuffer,
+    idx: usize,
     out_ptr: &mut *const std::os::raw::c_char,
     out_len: &mut usize,
 ) -> bool {
-    match &value.0 {
-        cytosol::runtime::value::Value::Integer(_) => false,
-        cytosol::runtime::value::Value::String(s) => {
+    match buf.0.get(idx) {
+        Some(Value::String(s)) => {
             *out_ptr = s.as_ptr() as *const std::os::raw::c_char;
             *out_len = s.len();
             true
         }
-        cytosol::runtime::value::Value::Record(_) => false,
+        _ => false,
     }
 }
 
-/// Get a field value of the record in `value` at index `index` by creating a
-/// copy of the field and writing it to `out_value`.
+/// Get the field value buffer of the record in `buf` at `idx`.
 ///
-/// The value in `out_value` will be owned, so the `destroy` function needs to
-/// be called.
+/// The value buffer in `out_value` will be owned, so the `destroy` function
+/// needs to be called.
 ///
-/// If `value` is not a record or if `index` is out of bounds then `false` is
-/// returned, `true` otherwise.
+/// If the value at `idx` is not a record or if `idx` is out of bounds then
+/// `false` is returned, `true` otherwise.
 #[no_mangle]
-pub extern "C" fn cyt_value_get_record_field(
-    value: &Value,
-    index: usize,
-    out_value: &mut *const Value,
+pub extern "C" fn cyt_value_buffer_get_record_fields(
+    buf: &ValueBuffer,
+    idx: usize,
+    out_value: &mut *mut ValueBuffer,
 ) -> bool {
-    match &value.0 {
-        cytosol::runtime::value::Value::Integer(_) => false,
-        cytosol::runtime::value::Value::String(_) => false,
-        cytosol::runtime::value::Value::Record(r) => {
-            if let Some(s) = r.get(index) {
-                *out_value = Box::into_raw(Box::new(Value(s.clone())));
-                true
-            } else {
-                false
-            }
+    match buf.0.get(idx) {
+        Some(Value::Record(r)) => {
+            *out_value = Box::into_raw(Box::new(ValueBuffer(r.clone())));
+            true
         }
+        _ => false,
     }
 }
 
@@ -320,22 +329,16 @@ pub extern "C" fn cyt_cellenv_destroy(cell_env: Box<CellEnv>) {
 
 /// Add a record with id `record_id` to the environment `quantity` times.
 ///
-/// The `fields` will be copied
-///
-/// # Safety
-/// `fields` must be a valid pointer to an array of values allocated by the
-/// `cyt_value_` functions with `num_fields` elements.
+/// The ownership of `fields` will be transferred, so **do not** call the
+/// destroy function on this value buffer.
 #[no_mangle]
-pub unsafe extern "C" fn cyt_cellenv_add_record(
+pub extern "C" fn cyt_cellenv_add_record(
     cell_env: &mut CellEnv,
     quantity: usize,
     record_id: RecordId,
-    num_fields: usize,
-    fields: *const *const Value,
+    fields: Box<ValueBuffer>,
 ) {
-    let fields_slice = std::slice::from_raw_parts(fields, num_fields);
-    let fields = fields_slice.iter().map(|v| (**v).0.clone()).collect();
-    cell_env.0.add_record(quantity, record_id.to_id(), fields)
+    cell_env.0.add_record(quantity, record_id.to_id(), fields.0);
 }
 
 #[no_mangle]
@@ -369,17 +372,14 @@ pub extern "C" fn cyt_exec_state_destroy(exec_state: Box<ExecutionState>) {
 pub unsafe extern "C" fn cyt_exec_state_set_extern_function(
     exec_state: &mut ExecutionState,
     name: *const std::os::raw::c_char,
-    f: extern "C" fn(*mut std::os::raw::c_void, usize, *const *const Value),
+    f: extern "C" fn(*mut std::os::raw::c_void, *const ValueBuffer),
     data: *mut std::os::raw::c_void,
 ) {
     let name = CStr::from_ptr(name);
 
     let ctx = exec_state.0.program_context();
     ctx.set_extern_function_raw(name.to_string_lossy().into_owned(), move |args| {
-        let boxed = args
-            .iter()
-            .map(|s| Box::new(Value(s.clone())))
-            .collect::<Vec<_>>();
-        f(data, boxed.len(), boxed.as_ptr() as *const *const Value);
+        let buf = ValueBuffer(args.to_vec());
+        f(data, &buf as *const _);
     });
 }

@@ -26,7 +26,7 @@ typedef struct cyt_exec_state cyt_exec_state;
 
 typedef struct cyt_program cyt_program;
 
-typedef struct cyt_value cyt_value;
+typedef struct cyt_value_buffer cyt_value_buffer;
 
 typedef struct cyt_record_id {
         uint32_t _0;
@@ -104,65 +104,74 @@ void cyt_driver_runner_run(struct cyt_driver_runner *r,
                            struct cyt_cell_env *cell_env,
                            size_t iter_bound);
 
-struct cyt_value *cyt_value_new_integer(ptrdiff_t n);
+struct cyt_value_buffer *cyt_value_buffer_new(size_t size);
+
+size_t cyt_value_buffer_get_size(const struct cyt_value_buffer *buf);
+
+void cyt_value_buffer_set_int(struct cyt_value_buffer *buf,
+                              size_t idx,
+                              ptrdiff_t i);
 
 /**
  * # Safety
  * `s` must be a valid pointer to a UTF-8 and NUL-terminated string.
  */
-struct cyt_value *cyt_value_new_string(const char *s);
-
-struct cyt_value *cyt_value_new_record(void);
+void cyt_value_buffer_set_string(struct cyt_value_buffer *buf,
+                                 size_t idx,
+                                 const char *s);
 
 /**
- * Adds the `new_field` value to the record in `record`.
- *
- * If `record` is not a value created with `cyt_value_new_record` then this function has no effect.
- *
- * The `new_field` value will transfer ownership, so the `destroy` function *must not* be called
- * on that value again.
+ * # Safety
+ * `fields` will be consumed, do **not** call the destructor on the value buffer
  */
-void cyt_value_record_add_field(struct cyt_value *record,
-                                struct cyt_value *new_field);
+void cyt_value_buffer_set_record(struct cyt_value_buffer *buf,
+                                 size_t idx,
+                                 struct cyt_value_buffer *fields);
 
-void cyt_value_destroy(struct cyt_value *value);
-
-/**
- * Get the type of the `value`.
- */
-enum cyt_value_type cyt_value_get_type(const struct cyt_value *value);
+void cyt_value_buffer_destroy(struct cyt_value_buffer *buf);
 
 /**
- * Get the integer value in `value` by writing it in `out_i`.
+ * Get the type of the value at index `idx`.
  *
- * If `value` is not an integer then `false` is returned, `true` otherwise.
+ * If the index is out of bounds then `Integer` will be returned.
  */
-bool cyt_value_get_integer(const struct cyt_value *value, ptrdiff_t *out_i);
+enum cyt_value_type cyt_value_get_type(const struct cyt_value_buffer *buf,
+                                       size_t idx);
 
 /**
- * Get the string value in `value` by writing a pointer to `out_ptr` and the length to `out_len`.
+ * Get the integer value in `buf` at `idx` by writing it in `out_i`.
+ *
+ * If the value is not an integer then `false` is returned, `true` otherwise.
+ */
+bool cyt_value_buffer_get_integer(const struct cyt_value_buffer *buf,
+                                  size_t idx,
+                                  ptrdiff_t *out_i);
+
+/**
+ * Get the string value in `buf` at `idx` by writing a pointer to `out_ptr`
+ * and the length to `out_len`.
  *
  * The string is **NOT** NUL-terminated.
  *
- * If `value` is not a string then `false` is returned, `true` otherwise.
+ * If the value is not a string then `false` is returned, `true` otherwise.
  */
-bool cyt_value_get_string(const struct cyt_value *value,
-                          const char **out_ptr,
-                          size_t *out_len);
+bool cyt_value_buffer_get_string(const struct cyt_value_buffer *buf,
+                                 size_t idx,
+                                 const char **out_ptr,
+                                 size_t *out_len);
 
 /**
- * Get a field value of the record in `value` at index `index` by creating a
- * copy of the field and writing it to `out_value`.
+ * Get the field value buffer of the record in `buf` at `idx`.
  *
- * The value in `out_value` will be owned, so the `destroy` function needs to
- * be called.
+ * The value buffer in `out_value` will be owned, so the `destroy` function
+ * needs to be called.
  *
- * If `value` is not a record or if `index` is out of bounds then `false` is
- * returned, `true` otherwise.
+ * If the value at `idx` is not a record or if `idx` is out of bounds then
+ * `false` is returned, `true` otherwise.
  */
-bool cyt_value_get_record_field(const struct cyt_value *value,
-                                size_t index,
-                                const struct cyt_value **out_value);
+bool cyt_value_buffer_get_record_fields(const struct cyt_value_buffer *buf,
+                                        size_t idx,
+                                        struct cyt_value_buffer **out_value);
 
 struct cyt_cell_env *cyt_cellenv_new(void);
 
@@ -171,17 +180,13 @@ void cyt_cellenv_destroy(struct cyt_cell_env *cell_env);
 /**
  * Add a record with id `record_id` to the environment `quantity` times.
  *
- * The `fields` will be copied
- *
- * # Safety
- * `fields` must be a valid pointer to an array of values allocated by the
- * `cyt_value_` functions with `num_fields` elements.
+ * The ownership of `fields` will be transferred, so **do not** call the
+ * destroy function on this value buffer.
  */
 void cyt_cellenv_add_record(struct cyt_cell_env *cell_env,
                             size_t quantity,
                             struct cyt_record_id record_id,
-                            size_t num_fields,
-                            const struct cyt_value *const *fields);
+                            struct cyt_value_buffer *fields);
 
 size_t cyt_cellenv_count_records(const struct cyt_cell_env *cell_env,
                                  struct cyt_record_id record_id);
@@ -197,7 +202,7 @@ void cyt_exec_state_destroy(struct cyt_exec_state *exec_state);
  */
 void cyt_exec_state_set_extern_function(struct cyt_exec_state *exec_state,
                                         const char *name,
-                                        void (*f)(void*, size_t, const struct cyt_value*const *),
+                                        void (*f)(void*, const struct cyt_value_buffer*),
                                         void *data);
 
 #ifdef __cplusplus

@@ -68,7 +68,7 @@ renaming_overrides_prefixing = false
 [export.rename]
 "Program" = "program"
 "DriverRunner" = "driver_runner"
-"Value" = "value"
+"ValueBuffer" = "value_buffer"
 "ValueType" = "value_type"
 "RecordId" = "record_id"
 "RunResult" = "run_result"
