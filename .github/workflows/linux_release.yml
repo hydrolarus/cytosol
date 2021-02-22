@@ -32,7 +32,10 @@ jobs:
         prerelease: true
 
     - name: Compress
-      run: tar -czvf cytosol-linux-cffi.tar.gz target/release/libcytosol_c_ffi.a cytosol-c-ffi/cytosol.h
+      run: |
+        cp target/release/libcytosol_c_ffi.a .
+        cp cytosol-c-ffi/cytosol.h .
+        tar -czvf cytosol-linux-cffi.tar.gz libcytosol_c_ffi.a cytosol.h
 
     - name: Upload Release Asset
       id: upload-release-asset
