@@ -1,0 +1,11 @@
+extern print_string(s: string)
+
+record Start
+record StartInhibitor
+
+gene [Start, 0 StartInhibitor]
+{
+    express StartInhibitor
+
+    call print_string(s: "hello, world.\n")
+}
