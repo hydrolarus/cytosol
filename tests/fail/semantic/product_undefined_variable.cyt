@@ -1,8 +1,8 @@
 record Value(val: int)
 
-rule [a: Value] -> Value(val: b.val)
+rule (a: Value) -> Value(val: b.val)
 
-rule [a: Value] -> Value(val: a.val) // this is valid
+rule (a: Value) -> Value(val: a.val) // this is valid
 
 // args: --no-colour
 
@@ -10,5 +10,5 @@ rule [a: Value] -> Value(val: a.val) // this is valid
 // error: undefined variable `b`
 //   ┌─ ../tests/fail/semantic/product_undefined_variable.cyt:3:31
 //   │
-// 3 │ rule [a: Value] -> Value(val: b.val)
+// 3 │ rule (a: Value) -> Value(val: b.val)
 //   │                               ^ undefined variable

@@ -1,4 +1,4 @@
-gene [x: int]
+gene (x: int)
 {}
 
 // args: --no-colour
@@ -7,5 +7,5 @@ gene [x: int]
 // error: type `int` cannot be used in an execution factor list
 //   ┌─ ../tests/fail/semantic/invalid_factor_type.cyt:1:10
 //   │
-// 1 │ gene [x: int]
+// 1 │ gene (x: int)
 //   │          ^^^ this type cannot be used as an execution factor

@@ -1,0 +1,27 @@
+record A
+record B
+record C
+
+rule (A, B) -> C
+    when [A] > [B]
+
+gene (A, C)
+    when [C] > [A]
+{
+}
+
+// args: --no-colour --no-run --dump-ast
+// expected stderr:
+// (file
+//     ((record A ()) (record B ()) (record C ()))
+//     (
+//         (gene
+//             ((record A) (record C))
+//             (when (> (concentration C) (concentration A)))
+//             ()))
+//     (
+//         (rule
+//             ((record A) (record B))
+//             ((product C))
+//             (when (> (concentration A) (concentration B)))))
+//     ())

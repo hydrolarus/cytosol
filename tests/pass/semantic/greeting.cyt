@@ -5,19 +5,20 @@ record NameDegrader
 
 record RemoveNameInput
 
-rule [RemoveNameInput, NameInput, NameDegrader] -> RemoveNameInput
+rule (RemoveNameInput, NameInput, NameDegrader) -> RemoveNameInput
 
 record Start
 record StartInhibitor
 
-gene [Start, 0 StartInhibitor]
+gene (Start)
+    when [StartInhibitor] = 0
 {
     express StartInhibitor
     express NameInput(name: "traveller")
     express RemoveNameInput
 }
 
-gene [n: NameInput]
+gene (n: NameInput)
 {
     call print_string(msg: "Greetings, ")
     call print_string(msg: n.name)

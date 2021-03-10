@@ -55,6 +55,7 @@ pub enum Type {
 pub struct Gene {
     pub fc: FC,
     pub factors: Vec<Binding>,
+    pub when: Option<Expression>,
     pub body: Vec<GeneStatement>,
 }
 
@@ -62,6 +63,7 @@ pub struct Gene {
 pub struct Rule {
     pub fc: FC,
     pub reactants: Vec<Binding>,
+    pub when: Option<Expression>,
     pub products: Vec<Product>,
 }
 
@@ -100,10 +102,12 @@ pub enum Expression {
         op: (FC, InfixOperator),
         args: Box<[Expression; 2]>,
     },
+    Concentration(Identifier),
 }
 
 #[derive(Debug, Clone)]
 pub enum Literal {
+    Bool(FC, bool),
     Integer(FC, usize),
     String(FC, String),
 }
@@ -117,4 +121,17 @@ pub enum PrefixOperator {
 pub enum InfixOperator {
     Add,
     Sub,
+
+    Mul,
+    Div,
+
+    Eq,
+    Neq,
+    Lt,
+    Lte,
+    Gt,
+    Gte,
+
+    And,
+    Or,
 }

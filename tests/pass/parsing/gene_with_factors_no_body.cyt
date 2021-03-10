@@ -1,10 +1,10 @@
-gene [Start, 0 StartInhibitor ]
+gene (Start, 0 StartInhibitor)
 {}
 
-gene []
+gene ()
 {}
 
-gene [1 A, 12 C, n: B] // trailing comma
+gene (1 A, 12 C, n: B) // trailing comma
 {}
 
 // args: --dump-ast --no-semantic-analysis

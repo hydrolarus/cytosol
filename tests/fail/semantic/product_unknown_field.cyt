@@ -1,6 +1,6 @@
 record Person(name: string, age: int)
 
-rule [] -> Person(name: "a", age: 20, address: "example street")
+rule () -> Person(name: "a", age: 20, address: "example street")
 
 // args: --no-colour
 
@@ -11,5 +11,5 @@ rule [] -> Person(name: "a", age: 20, address: "example street")
 // 1 │ record Person(name: string, age: int)
 //   │        ------ no such field in the definition of the record
 // 2 │ 
-// 3 │ rule [] -> Person(name: "a", age: 20, address: "example street")
+// 3 │ rule () -> Person(name: "a", age: 20, address: "example street")
 //   │                                       ^^^^^^^ unknown field

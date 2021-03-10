@@ -2,7 +2,7 @@ record A
 record B(x: int, y: string)
 record C(n: int)
 
-gene []
+gene ()
 {
     express A
     express B(x: 0, y: "hello",)

@@ -1,6 +1,6 @@
 extern EmitPersonInfo(name: string, age: int)
 
-gene []
+gene ()
 {
     call EmitPersonInfo(name: "test", age: 20, address: "Example street")
 }

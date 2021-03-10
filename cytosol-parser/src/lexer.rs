@@ -26,6 +26,9 @@ pub enum TokenKind<'src> {
     #[token("extern")]
     Extern,
 
+    #[token("when")]
+    When,
+
     #[token("Ø")]
     #[token("ø")]
     #[token("nothing")]
@@ -72,6 +75,33 @@ pub enum TokenKind<'src> {
     OpMinus,
     #[token("+")]
     OpPlus,
+
+    #[token("*")]
+    OpStar,
+    #[token("/")]
+    OpSlash,
+
+    #[token("=")]
+    OpEquals,
+    #[token("/=")]
+    #[token("!=")]
+    #[token("≠")]
+    OpNotEquals,
+    #[token("<")]
+    OpLessThan,
+    #[token("<=")]
+    #[token("≤")]
+    OpLessThanEqual,
+    #[token(">")]
+    OpGreaterThan,
+    #[token(">=")]
+    #[token("≥")]
+    OpGreaterThanEqual,
+
+    #[token("and")]
+    OpAnd,
+    #[token("or")]
+    OpOr,
 
     #[error]
     // skip whitespace

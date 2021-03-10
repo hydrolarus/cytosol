@@ -60,6 +60,17 @@ pub fn run_gene(
         env.apply_non_moving_bind(bind, *rec, vars);
     }
 
+    if let Some(expr) = gene.when {
+        match eval_expr(prog, env, vars, expr).unwrap() {
+            Value::Bool(true) => {}
+            Value::Bool(false) => {
+                // the `when` clause is not satisfied, don't run
+                return;
+            }
+            _ => unreachable!("when expressions must evaluate to bools"),
+        }
+    }
+
     for stmt_id in &gene.body {
         let stmt = &prog[*stmt_id];
         match stmt {
@@ -72,7 +83,7 @@ pub fn run_gene(
 
                 let fn_args = arguments
                     .iter()
-                    .map(|id| eval_expr(prog, vars, *id).unwrap())
+                    .map(|id| eval_expr(prog, env, vars, *id).unwrap())
                     .collect::<Vec<_>>();
 
                 (ext_fn)(&fn_args[..]);
@@ -108,6 +119,7 @@ fn run_rule(
 ) {
     for _ in 0..quantity {
         vars.clear();
+
         for (bind, rec) in &rule.binds {
             env.apply_moving_bind(bind, *rec, vars);
         }
@@ -122,20 +134,26 @@ fn eval_product(prog: &Program, env: &mut CellEnv, vars: &RuntimeVars, prod: &Pr
     let fields = prod
         .arguments
         .iter()
-        .map(|id| eval_expr(prog, vars, *id).unwrap())
+        .map(|id| eval_expr(prog, env, vars, *id).unwrap())
         .collect::<Vec<_>>();
 
     env.add_record(prod.quantity, prod.record, fields);
 }
 
-fn eval_expr(prog: &Program, vars: &RuntimeVars, id: ExpressionId) -> Option<Value> {
+fn eval_expr(
+    prog: &Program,
+    env: &impl RecordContainer,
+    vars: &RuntimeVars,
+    id: ExpressionId,
+) -> Option<Value> {
     let expr = &prog[id];
     match expr {
+        hir::types::Expression::BoolLiteral(b) => Some(Value::Bool(*b)),
         hir::types::Expression::IntegerLiteral(i) => Some(Value::Integer(*i as isize)),
         hir::types::Expression::StringLiteral(s) => Some(Value::String(s.clone())),
         hir::types::Expression::Variable(v) => vars.lookup(&v.1),
         hir::types::Expression::FieldAccess { base, field } => {
-            let val = eval_expr(prog, vars, *base)?;
+            let val = eval_expr(prog, env, vars, *base)?;
             if let Value::Record(mut fields) = val {
                 Some(fields.remove(*field))
             } else {
@@ -144,7 +162,7 @@ fn eval_expr(prog: &Program, vars: &RuntimeVars, id: ExpressionId) -> Option<Val
         }
         hir::types::Expression::PrefixOp { op, expr } => {
             //
-            let expr_val = eval_expr(prog, vars, *expr)?;
+            let expr_val = eval_expr(prog, env, vars, *expr)?;
             match (op, expr_val) {
                 (PrefixOperator::Neg, Value::Integer(i)) => Some(Value::Integer(-i)),
                 _ => None,
@@ -154,21 +172,42 @@ fn eval_expr(prog: &Program, vars: &RuntimeVars, id: ExpressionId) -> Option<Val
             op,
             args: [lhs, rhs],
         } => {
-            let lhs_val = eval_expr(prog, vars, *lhs)?;
-            let rhs_val = eval_expr(prog, vars, *rhs)?;
+            let lhs_val = eval_expr(prog, env, vars, *lhs)?;
+            let rhs_val = eval_expr(prog, env, vars, *rhs)?;
+
+            use InfixOperator::*;
+            use Value::*;
 
             match (op, lhs_val, rhs_val) {
-                (InfixOperator::Add, Value::Integer(a), Value::Integer(b)) => {
-                    Some(Value::Integer(a + b))
-                }
-                (InfixOperator::Add, Value::String(a), Value::String(b)) => {
-                    Some(Value::String(a + &b))
-                }
-                (InfixOperator::Sub, Value::Integer(a), Value::Integer(b)) => {
-                    Some(Value::Integer(a - b))
-                }
+                (Add, Integer(a), Integer(b)) => Some(Integer(a + b)),
+                (Add, String(a), String(b)) => Some(String(a + &b)),
+                (Sub, Integer(a), Integer(b)) => Some(Integer(a - b)),
+                (Mul, Integer(a), Integer(b)) => Some(Integer(a * b)),
+                (Div, Integer(a), Integer(b)) => Some(Integer(a / b)),
+
+                (Eq, Bool(a), Bool(b)) => Some(Bool(a == b)),
+                (Eq, Integer(a), Integer(b)) => Some(Bool(a == b)),
+                (Eq, String(a), String(b)) => Some(Bool(a == b)),
+
+                (Neq, Bool(a), Bool(b)) => Some(Bool(a != b)),
+                (Neq, Integer(a), Integer(b)) => Some(Bool(a != b)),
+                (Neq, String(a), String(b)) => Some(Bool(a != b)),
+
+                (Lt, Integer(a), Integer(b)) => Some(Bool(a < b)),
+                (Lte, Integer(a), Integer(b)) => Some(Bool(a <= b)),
+                (Gt, Integer(a), Integer(b)) => Some(Bool(a > b)),
+                (Gte, Integer(a), Integer(b)) => Some(Bool(a >= b)),
+
+                (And, Bool(a), Bool(b)) => Some(Bool(a && b)),
+                (Or, Bool(a), Bool(b)) => Some(Bool(a || b)),
+
                 _ => None,
             }
+        }
+
+        hir::types::Expression::Concentration(id) => {
+            let count = env.count_records(*id);
+            Some(Value::Integer(count as isize))
         }
     }
 }
@@ -192,6 +231,10 @@ impl RuntimeVars {
     }
 }
 
+pub trait RecordContainer {
+    fn count_records(&self, record_id: RecordId) -> usize;
+}
+
 #[derive(Default, Debug)]
 pub struct CellEnv {
     pub records: HashMap<RecordId, Vec<RecordFields>>,
@@ -211,21 +254,11 @@ impl CellEnv {
         recs.extend(std::iter::repeat(fields).take(quantity));
     }
 
-    pub fn count_records(&self, record_id: RecordId) -> usize {
-        self.records
-            .get(&record_id)
-            .map(|vals| vals.len())
-            .unwrap_or(0)
-    }
-
     pub fn apply_moving_bind(&mut self, bind: &Bind, record: RecordId, vars: &mut RuntimeVars) {
         let mut rng = rand::thread_rng();
 
         let recs = self.records.get_mut(&record).unwrap();
         match bind {
-            Bind::None => {
-                debug_assert_eq!(recs.len(), 0);
-            }
             Bind::Quantity(n) => {
                 debug_assert!(recs.len() >= *n);
                 for _ in 0..*n {
@@ -253,9 +286,6 @@ impl CellEnv {
         let empty_vec = vec![];
         let recs = self.records.get(&record_id).unwrap_or(&empty_vec);
         match bind {
-            Bind::None => {
-                debug_assert_eq!(recs.len(), 0);
-            }
             Bind::Quantity(n) => {
                 debug_assert!(recs.len() >= *n);
             }
@@ -266,6 +296,15 @@ impl CellEnv {
                 vars.insert(name.1.clone(), Value::Record(fields));
             }
         }
+    }
+}
+
+impl RecordContainer for CellEnv {
+    fn count_records(&self, record_id: RecordId) -> usize {
+        self.records
+            .get(&record_id)
+            .map(|vals| vals.len())
+            .unwrap_or(0)
     }
 }
 
@@ -283,7 +322,6 @@ impl CellEnvSummary {
         let have = self.records.get(&record_id).copied().unwrap_or(0);
 
         match bind {
-            Bind::None => have == 0,
             Bind::Quantity(need) => have >= *need,
             Bind::Named(_) => have >= 1,
         }
@@ -299,9 +337,6 @@ impl CellEnvSummary {
         };
 
         match bind {
-            Bind::None => {
-                debug_assert_eq!(*have, 0);
-            }
             Bind::Quantity(need) => {
                 debug_assert!(*have >= *need);
                 *have -= *need;
@@ -311,6 +346,12 @@ impl CellEnvSummary {
                 *have -= 1;
             }
         }
+    }
+}
+
+impl RecordContainer for CellEnvSummary {
+    fn count_records(&self, record_id: RecordId) -> usize {
+        self.records.get(&record_id).copied().unwrap_or(0)
     }
 }
 
@@ -357,7 +398,7 @@ impl ExecutionPlan {
         self.eligable_rule_ids.extend(
             self.rules
                 .iter()
-                .filter(|id| is_rule_eligable(&prog[**id], summ)),
+                .filter(|id| is_rule_eligable(prog, &prog[**id], summ)),
         );
 
         // all rules can "run" at least once.
@@ -377,7 +418,7 @@ impl ExecutionPlan {
                 still_eligable.shuffle(&mut rng);
 
                 for (idx, id) in still_eligable.iter().enumerate() {
-                    if is_rule_eligable(&prog[*id], summ) {
+                    if is_rule_eligable(prog, &prog[*id], summ) {
                         *self.eligable_rules.get_mut(id).unwrap() += 1;
                     } else {
                         to_remove.push(idx);
@@ -419,10 +460,22 @@ fn is_gene_eligable(gene: &Gene, summ: &mut CellEnvSummary) -> bool {
     true
 }
 
-fn is_rule_eligable(rule: &Rule, summ: &mut CellEnvSummary) -> bool {
+fn is_rule_eligable(prog: &Program, rule: &Rule, summ: &mut CellEnvSummary) -> bool {
     for (bind, rec) in &rule.binds {
         if !summ.check_bind(bind, *rec) {
             return false;
+        }
+    }
+
+    if let Some(expr) = rule.when {
+        match eval_expr(prog, summ, &RuntimeVars::default(), expr).unwrap() {
+            Value::Bool(true) => {}
+            Value::Bool(false) => {
+                // This rule is not eligable to run because the when condition
+                // is not met
+                return false;
+            }
+            _ => unreachable!("when expressions must evaluate to bools"),
         }
     }
 

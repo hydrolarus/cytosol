@@ -1,6 +1,6 @@
 record Person(name: string, age: int)
 
-rule [] -> Person(age: 20)
+rule () -> Person(age: 20)
 
 // args: --no-colour
 
@@ -11,5 +11,5 @@ rule [] -> Person(age: 20)
 // 1 │ record Person(name: string, age: int)
 //   │               ---- this field is missing
 // 2 │ 
-// 3 │ rule [] -> Person(age: 20)
+// 3 │ rule () -> Person(age: 20)
 //   │            ^^^^^^^^^^^^^^^ this product is incomplete

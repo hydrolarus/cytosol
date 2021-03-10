@@ -1,6 +1,6 @@
 extern EmitCoord(x: int, y: int)
 
-gene []
+gene ()
 {
     call EmitCoord(x: 12)
 }

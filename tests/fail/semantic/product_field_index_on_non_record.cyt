@@ -1,6 +1,6 @@
 record Value(field: int)
 
-rule [a: Value] -> Value(field: a.field.field)
+rule (a: Value) -> Value(field: a.field.field)
 
 // args: --no-colour
 
@@ -8,5 +8,5 @@ rule [a: Value] -> Value(field: a.field.field)
 // error: tried to access field `field` on non-record type `int`
 //   ┌─ ../tests/fail/semantic/product_field_index_on_non_record.cyt:3:41
 //   │
-// 3 │ rule [a: Value] -> Value(field: a.field.field)
+// 3 │ rule (a: Value) -> Value(field: a.field.field)
 //   │                                         ^^^^^ no such field on non-record type `int`

@@ -8,13 +8,15 @@ record StartInhibitor
 record Add(a: int, b: int)
 record AddInhibitor
 
-gene [Start, 0 StartInhibitor]
+gene (Start)
+    when [StartInhibitor] = 0
 {
     express Add(a: 30, b: 12)
     express StartInhibitor
 }
 
-gene [to_add: Add, 0 AddInhibitor]
+gene (to_add: Add)
+    when [AddInhibitor] = 0
 {
     call print_int(i: to_add.a)
     call print_string(s: " + ")

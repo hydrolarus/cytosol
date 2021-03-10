@@ -1,4 +1,4 @@
-rule [a: int] -> nothing
+rule (a: int) -> nothing
 
 // args: --no-colour
 
@@ -6,5 +6,5 @@ rule [a: int] -> nothing
 // error: type `int` cannot be used in a reactant list
 //   ┌─ ../tests/fail/semantic/invalid_product_type.cyt:1:10
 //   │
-// 1 │ rule [a: int] -> nothing
+// 1 │ rule (a: int) -> nothing
 //   │          ^^^ this type cannot be used as a reactant

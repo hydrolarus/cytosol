@@ -84,12 +84,14 @@ impl HasFC for Expression {
             Expression::FieldAccess { base, field_name } => base.fc().merge(field_name.fc()),
             Expression::PrefixOp { op, expr } => op.0.merge(expr.fc()),
             Expression::InfixOp { op: _, args } => args[0].fc().merge(args[1].fc()),
+            Expression::Concentration(ty) => ty.0,
         }
     }
 }
 impl HasFC for Literal {
     fn fc(&self) -> FC {
         match self {
+            Literal::Bool(fc, _) => *fc,
             Literal::Integer(fc, _) => *fc,
             Literal::String(fc, _) => *fc,
         }
