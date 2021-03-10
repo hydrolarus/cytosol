@@ -83,6 +83,7 @@ pub enum TokenKind<'src> {
 
     #[token("=")]
     OpEquals,
+    #[token("/=")]
     #[token("!=")]
     #[token("≠")]
     OpNotEquals,
