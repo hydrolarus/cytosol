@@ -282,6 +282,8 @@ impl ToDoc for InfixOperator {
             InfixOperator::Lte => Doc::text("≤"),
             InfixOperator::Gt => Doc::text(">"),
             InfixOperator::Gte => Doc::text("≥"),
+            InfixOperator::And => Doc::text("and"),
+            InfixOperator::Or => Doc::text("or"),
         }
     }
 }

@@ -496,6 +496,8 @@ impl<'src, I: Iterator<Item = Token<'src>>> Parser<'src, I> {
                 TokenKind::OpLessThanEqual => (next.fc, InfixOperator::Lte),
                 TokenKind::OpGreaterThan => (next.fc, InfixOperator::Gt),
                 TokenKind::OpGreaterThanEqual => (next.fc, InfixOperator::Gte),
+                TokenKind::OpAnd => (next.fc, InfixOperator::And),
+                TokenKind::OpOr => (next.fc, InfixOperator::Or),
                 _ => return Ok(expr),
             };
 

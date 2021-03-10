@@ -97,6 +97,11 @@ pub enum TokenKind<'src> {
     #[token("≥")]
     OpGreaterThanEqual,
 
+    #[token("and")]
+    OpAnd,
+    #[token("or")]
+    OpOr,
+
     #[error]
     // skip whitespace
     #[regex(r"[ \t\n\f]+", logos::skip)]

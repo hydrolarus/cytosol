@@ -902,6 +902,9 @@ impl Translator<'_> {
                     InfixOperator::Lte => vec![binop!(int, int => bool)],
                     InfixOperator::Gt => vec![binop!(int, int => bool)],
                     InfixOperator::Gte => vec![binop!(int, int => bool)],
+
+                    InfixOperator::And => vec![binop!(bool, bool => bool)],
+                    InfixOperator::Or => vec![binop!(bool, bool => bool)],
                 };
 
                 if let Some((_, res_ty)) = operator_types

@@ -198,6 +198,9 @@ fn eval_expr(
                 (Gt, Integer(a), Integer(b)) => Some(Bool(a > b)),
                 (Gte, Integer(a), Integer(b)) => Some(Bool(a >= b)),
 
+                (And, Bool(a), Bool(b)) => Some(Bool(a && b)),
+                (Or, Bool(a), Bool(b)) => Some(Bool(a || b)),
+
                 _ => None,
             }
         }

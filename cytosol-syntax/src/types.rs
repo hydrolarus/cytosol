@@ -131,4 +131,7 @@ pub enum InfixOperator {
     Lte,
     Gt,
     Gte,
+
+    And,
+    Or,
 }
