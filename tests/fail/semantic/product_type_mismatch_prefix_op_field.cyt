@@ -1,6 +1,6 @@
 record Input(name: string)
 
-rule [a: Input] -> Input(name: -a.name)
+rule (a: Input) -> Input(name: -a.name)
 
 // args: --no-colour
 
@@ -8,7 +8,7 @@ rule [a: Input] -> Input(name: -a.name)
 // error: cannot apply unary operator `-` to type `string`
 //   ┌─ ../tests/fail/semantic/product_type_mismatch_prefix_op_field.cyt:3:32
 //   │
-// 3 │ rule [a: Input] -> Input(name: -a.name)
+// 3 │ rule (a: Input) -> Input(name: -a.name)
 //   │                                ^------ this expression has type `string`
 //   │                                │ 
 //   │                                this unary operator is incompatible with type `string`

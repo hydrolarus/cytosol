@@ -3,7 +3,7 @@ extern print_line(msg: string)
 record Start
 record StartInhibitor
 
-gene [Start, 0 StartInhibitor]
+gene (Start, 0 StartInhibitor)
 {
     call print_line(msg: "hello world")
     express StartInhibitor

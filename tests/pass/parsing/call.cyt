@@ -2,7 +2,7 @@ extern print_line(s: string)
 
 record Start
 
-gene [Start]
+gene (Start)
 {
     call print_line(s: "Hello!")
 }

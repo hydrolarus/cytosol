@@ -1,0 +1,39 @@
+extern print_line(msg: string)
+
+record Start
+record StartInhibitor
+
+record A
+record B
+
+gene (Start)
+    when [StartInhibitor] = 0
+{
+    call print_line(msg: "ran!")
+    express StartInhibitor
+
+    express 5 A
+    express 3 B
+
+    // the ratio of A and B makes A be printed
+    // uncomment this next line to add more A's
+    // express 5 A
+}
+
+record Found(which: string)
+
+rule (A, B) -> Found(which: "A")
+    when [A] > (2 * [B])
+
+rule (A, B) -> Found(which: "B")
+    when [A] < (2 * [B])
+
+record FoundPrintInhibitor
+
+gene (f: Found)
+    when [FoundPrintInhibitor] = 0
+{
+    express FoundPrintInhibitor
+
+    call print_line(msg: "found more " + f.which)
+}

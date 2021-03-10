@@ -159,13 +159,34 @@ impl<'src, I: Iterator<Item = Token<'src>>> Parser<'src, I> {
                         .while_parsing("a gene item");
 
                     let (_, factors) = self.grouped_separated(
-                        (TokenKind::BracketOpen, TokenKind::BracketClose),
-                        ec.while_parsing("a gene factor list").expected("`[`"),
+                        (TokenKind::ParenOpen, TokenKind::ParenClose),
+                        ec.while_parsing("a gene factor list").expected("`(`"),
                         TokenKind::Comma,
                         ec.while_parsing("a gene factor list")
-                            .expected("`,` or `]`"),
+                            .expected("`,` or `)`"),
                         |s| s.parse_binding(ec),
                     )?;
+
+                    let next = {
+                        let file = self.file;
+                        self.peek().ok_or_else({
+                            || Error::UnexpectedEnd(file, ec.while_parsing("gene item"))
+                        })?
+                    };
+
+                    let when = match &next.kind {
+                        TokenKind::When => {
+                            let next = self.next().unwrap();
+                            let wec = ec
+                                .while_parsing("a when clause")
+                                .start(next.fc, "when clause");
+
+                            let expr = self.parse_expression(wec)?;
+
+                            Some(expr)
+                        }
+                        _ => None,
+                    };
 
                     let (end_fc, stmts) = self.grouped(
                         (TokenKind::BraceOpen, TokenKind::BraceClose),
@@ -178,6 +199,7 @@ impl<'src, I: Iterator<Item = Token<'src>>> Parser<'src, I> {
                     file.genes.push(Gene {
                         fc,
                         factors,
+                        when,
                         body: stmts,
                     });
                 }
@@ -188,11 +210,11 @@ impl<'src, I: Iterator<Item = Token<'src>>> Parser<'src, I> {
                         .while_parsing("a rule item");
 
                     let (_, reactants) = self.grouped_separated(
-                        (TokenKind::BracketOpen, TokenKind::BracketClose),
-                        ec.while_parsing("a rule reactant list").expected("`[`"),
+                        (TokenKind::ParenOpen, TokenKind::ParenClose),
+                        ec.while_parsing("a rule reactant list").expected("`(`"),
                         TokenKind::Comma,
                         ec.while_parsing("a rule reactant list")
-                            .expected("`,` or `]`"),
+                            .expected("`,` or `)`"),
                         |s| s.parse_binding(ec),
                     )?;
 
@@ -202,13 +224,33 @@ impl<'src, I: Iterator<Item = Token<'src>>> Parser<'src, I> {
                         |t| t.kind == TokenKind::ArrowR,
                     )?;
 
-                    let (end_fc, products) = self.parse_product_list(ec)?;
+                    let (product_fc, products) = self.parse_product_list(ec)?;
+
+                    let (when, end_fc) = match self.peek() {
+                        Some(Token {
+                            kind: TokenKind::When,
+                            ..
+                        }) => {
+                            let next = self.next().unwrap();
+                            let wec = ec
+                                .while_parsing("a when clause")
+                                .start(next.fc, "when clause");
+
+                            let expr = self.parse_expression(wec)?;
+
+                            let fc = expr.fc();
+
+                            (Some(expr), fc)
+                        }
+                        _ => (None, product_fc),
+                    };
 
                     let fc = start_tok.fc.merge(end_fc);
                     file.rules.push(Rule {
                         fc,
                         reactants,
                         products,
+                        when,
                     });
                 }
                 _ => {
@@ -440,18 +482,26 @@ impl<'src, I: Iterator<Item = Token<'src>>> Parser<'src, I> {
     }
 
     fn parse_expression(&mut self, pec: ErrorContext) -> Result<Expression> {
-        let mut expr = self.parse_expression_record(pec)?;
+        let mut expr = self.parse_expression_atom(pec)?;
 
         while let Some(next) = self.peek() {
             let op = match next.kind {
                 TokenKind::OpPlus => (next.fc, InfixOperator::Add),
                 TokenKind::OpMinus => (next.fc, InfixOperator::Sub),
+                TokenKind::OpStar => (next.fc, InfixOperator::Mul),
+                TokenKind::OpSlash => (next.fc, InfixOperator::Div),
+                TokenKind::OpEquals => (next.fc, InfixOperator::Eq),
+                TokenKind::OpNotEquals => (next.fc, InfixOperator::Neq),
+                TokenKind::OpLessThan => (next.fc, InfixOperator::Lt),
+                TokenKind::OpLessThanEqual => (next.fc, InfixOperator::Lte),
+                TokenKind::OpGreaterThan => (next.fc, InfixOperator::Gt),
+                TokenKind::OpGreaterThanEqual => (next.fc, InfixOperator::Gte),
                 _ => return Ok(expr),
             };
 
             let _ = self.next();
 
-            let rhs = self.parse_expression_record(pec)?;
+            let rhs = self.parse_expression_atom(pec)?;
 
             expr = Expression::InfixOp {
                 op,
@@ -462,12 +512,12 @@ impl<'src, I: Iterator<Item = Token<'src>>> Parser<'src, I> {
         Ok(expr)
     }
 
-    fn parse_expression_record(&mut self, pec: ErrorContext) -> Result<Expression> {
+    fn parse_expression_atom(&mut self, pec: ErrorContext) -> Result<Expression> {
         let file = self.file;
 
         let next = self
             .peek()
-            .ok_or_else(|| Error::UnexpectedEnd(file, pec.while_parsing("an expression record")))?;
+            .ok_or_else(|| Error::UnexpectedEnd(file, pec.while_parsing("an expression atom")))?;
         let start_fc = next.fc;
 
         let mut expr = match &next.kind {
@@ -486,6 +536,18 @@ impl<'src, I: Iterator<Item = Token<'src>>> Parser<'src, I> {
                 let _ = self.next();
                 Expression::Literal(Literal::String(start_fc, s))
             }
+            TokenKind::BracketOpen => {
+                let _ = self.next();
+                let name = self.parse_identifier(
+                    pec.while_parsing("a type inside a concentration expression"),
+                )?;
+                self.expect(
+                    pec.while_parsing("a concentration expression")
+                        .expected("`]`"),
+                    |t| t.kind == TokenKind::BracketClose,
+                )?;
+                Expression::Concentration(name)
+            }
             TokenKind::ParenOpen => {
                 let _ = self.next();
                 let val = self.parse_expression(pec)?;
@@ -497,7 +559,7 @@ impl<'src, I: Iterator<Item = Token<'src>>> Parser<'src, I> {
             }
             TokenKind::OpMinus => {
                 let t = self.next().unwrap();
-                let rhs = self.parse_expression_record(pec)?;
+                let rhs = self.parse_expression_atom(pec)?;
                 Expression::PrefixOp {
                     op: (t.fc, PrefixOperator::Neg),
                     expr: Box::new(rhs),
@@ -506,7 +568,7 @@ impl<'src, I: Iterator<Item = Token<'src>>> Parser<'src, I> {
             _ => {
                 return Err(Error::UnexpectedToken(
                     start_fc,
-                    pec.while_parsing("an expression record"),
+                    pec.while_parsing("an expression atom"),
                 ))
             }
         };
@@ -554,7 +616,7 @@ impl<'src, I: Iterator<Item = Token<'src>>> Parser<'src, I> {
         f: impl FnOnce(&Token<'src>) -> R,
     ) -> Result<R::Out> {
         match self.toks.peek() {
-            Some(tok) => match f(tok).as_result(context, tok.fc) {
+            Some(tok) => match f(tok).into_result(context, tok.fc) {
                 Ok(val) => {
                     let _ = self.toks.next();
                     Ok(val)
@@ -571,7 +633,7 @@ impl<'src, I: Iterator<Item = Token<'src>>> Parser<'src, I> {
         f: impl FnOnce(&Token<'src>) -> R,
     ) -> Result<(FC, R::Out)> {
         self.expect(context, |tok| {
-            f(tok).as_result(context, tok.fc).map(|r| (tok.fc, r))
+            f(tok).into_result(context, tok.fc).map(|r| (tok.fc, r))
         })
     }
 
@@ -671,13 +733,13 @@ impl<'src, I: Iterator<Item = Token<'src>>> Parser<'src, I> {
 trait ExpectRet {
     type Out;
 
-    fn as_result(self, context: ErrorContext, fc: FC) -> Result<Self::Out>;
+    fn into_result(self, context: ErrorContext, fc: FC) -> Result<Self::Out>;
 }
 
 impl<T> ExpectRet for Option<T> {
     type Out = T;
 
-    fn as_result(self, context: ErrorContext, fc: FC) -> Result<Self::Out> {
+    fn into_result(self, context: ErrorContext, fc: FC) -> Result<Self::Out> {
         match self {
             Some(val) => Ok(val),
             None => Err(Error::UnexpectedToken(fc, context)),
@@ -688,7 +750,7 @@ impl<T> ExpectRet for Option<T> {
 impl<T> ExpectRet for Result<T> {
     type Out = T;
 
-    fn as_result(self, _: ErrorContext, _: FC) -> Result<Self::Out> {
+    fn into_result(self, _: ErrorContext, _: FC) -> Result<Self::Out> {
         self
     }
 }
@@ -696,7 +758,7 @@ impl<T> ExpectRet for Result<T> {
 impl ExpectRet for bool {
     type Out = ();
 
-    fn as_result(self, context: ErrorContext, fc: FC) -> Result<Self::Out> {
+    fn into_result(self, context: ErrorContext, fc: FC) -> Result<Self::Out> {
         match self {
             true => Ok(()),
             false => Err(Error::UnexpectedToken(fc, context)),

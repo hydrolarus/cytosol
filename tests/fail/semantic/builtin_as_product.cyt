@@ -1,4 +1,4 @@
-rule [] -> int
+rule () -> int
 
 // args: --no-colour
 
@@ -6,5 +6,5 @@ rule [] -> int
 // error: builtin type `int` cannot be used as a product
 //   ┌─ ../tests/fail/semantic/builtin_as_product.cyt:1:12
 //   │
-// 1 │ rule [] -> int
+// 1 │ rule () -> int
 //   │            ^^^ builtin type cannot be used a product

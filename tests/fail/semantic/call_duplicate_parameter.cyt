@@ -1,6 +1,6 @@
 extern EmitInt(x: int)
 
-gene []
+gene ()
 {
     call EmitInt(x: 12, x: 55)
 }

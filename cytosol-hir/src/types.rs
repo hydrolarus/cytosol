@@ -5,6 +5,7 @@ pub type TypeId = Id<Type>;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Type {
+    Bool,
     Int,
     String,
     Record(RecordId),
@@ -30,7 +31,6 @@ pub struct Product {
 
 #[derive(Debug)]
 pub enum Bind {
-    None,
     Quantity(usize),
     Named(Identifier),
 }
@@ -40,6 +40,7 @@ pub type RuleId = Id<Rule>;
 #[derive(Debug)]
 pub struct Rule {
     pub binds: Vec<(Bind, RecordId)>,
+    pub when: Option<ExpressionId>,
     pub products: Vec<Product>,
 }
 
@@ -57,6 +58,7 @@ pub type GeneId = Id<Gene>;
 #[derive(Debug)]
 pub struct Gene {
     pub binds: Vec<(Bind, RecordId)>,
+    pub when: Option<ExpressionId>,
     pub body: Vec<GeneStatementId>,
 }
 
@@ -75,6 +77,7 @@ pub type ExpressionId = Id<Expression>;
 
 #[derive(Debug, Clone)]
 pub enum Expression {
+    BoolLiteral(bool),
     IntegerLiteral(usize),
     StringLiteral(String),
     Variable(Identifier),
@@ -90,4 +93,5 @@ pub enum Expression {
         op: InfixOperator,
         args: [ExpressionId; 2],
     },
+    Concentration(RecordId),
 }

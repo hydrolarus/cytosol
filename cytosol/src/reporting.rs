@@ -206,6 +206,23 @@ pub(crate) fn report_hir_translate_errors<'a>(
                     .with_message(message)
                     .with_labels(vec![label])
             }
+            Error::ZeroBind {
+                item,
+                bind_number,
+                type_name,
+            } => {
+                let message = "used `0` as a bind quantity".to_string();
+                let labels = vec![
+                    Label::primary(bind_number.file, bind_number.range())
+                        .with_message("bind quantity of `0` is not supported"),
+                    Label::secondary(item.file, item.range()),
+                ];
+                let note = format!("use `when [{}] = 0` instead", type_name.1);
+                Diagnostic::error()
+                    .with_message(message)
+                    .with_labels(labels)
+                    .with_notes(vec![note])
+            }
             Error::RedefinedBuiltinType { redef_name } => {
                 let message = format!("redefined builtin type `{}`", redef_name.1);
                 let label = Label::primary(redef_name.0.file, redef_name.0.range())
@@ -548,6 +565,24 @@ pub(crate) fn report_hir_translate_errors<'a>(
                         .with_message("no such parameter in the definition of the extern function"),
                 ];
 
+                Diagnostic::error()
+                    .with_message(message)
+                    .with_labels(labels)
+            }
+            Error::ConcentrationOfNonRecordType { fc: _, type_name } => {
+                let message = format!("concentration of type {} cannot be measured", type_name.1);
+                let labels = vec![Label::primary(type_name.0.file, type_name.0.range())
+                    .with_message("non record type used in concentration expression")];
+                Diagnostic::error()
+                    .with_message(message)
+                    .with_labels(labels)
+            }
+            Error::WhenClauseMustBeOfTypeBool { expr, type_id } => {
+                let expr_fc = prog.exprs_fc[expr];
+                let (type_name, _) = prog.type_name(*type_id).unwrap();
+                let message = "where clause must be of type `bool`".to_string();
+                let labels = vec![Label::primary(expr_fc.file, expr_fc.range())
+                    .with_message(format!("this expression has type `{}`", type_name))];
                 Diagnostic::error()
                     .with_message(message)
                     .with_labels(labels)

@@ -3,7 +3,8 @@ extern print_line(s: string)
 record Start
 record StartInhibitor
 
-gene [Start, 0 StartInhibitor]
+gene (Start)
+    when [StartInhibitor] = 0
 {
     express StartInhibitor
     call print_line(s: "hello, world.")
@@ -24,12 +25,15 @@ gene [Start, 0 StartInhibitor]
 // Record
 // Identifier("StartInhibitor")
 // Gene
-// BracketOpen
+// ParenOpen
 // Identifier("Start")
-// Comma
-// IntegerLiteral(0)
+// ParenClose
+// When
+// BracketOpen
 // Identifier("StartInhibitor")
 // BracketClose
+// OpEquals
+// IntegerLiteral(0)
 // BraceOpen
 // Express
 // Identifier("StartInhibitor")

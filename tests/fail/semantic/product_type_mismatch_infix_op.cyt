@@ -1,8 +1,8 @@
 record Result(val: int)
 
-rule [] -> Result(val: 12 + "string")
+rule () -> Result(val: 12 + "string")
 
-rule [] -> Result(val: 12 + 42) // this is valid
+rule () -> Result(val: 12 + 42) // this is valid
 
 // args: --no-colour
 
@@ -10,7 +10,7 @@ rule [] -> Result(val: 12 + 42) // this is valid
 // error: cannot apply infix operator `+` to types `int` and `string`
 //   ┌─ ../tests/fail/semantic/product_type_mismatch_infix_op.cyt:3:27
 //   │
-// 3 │ rule [] -> Result(val: 12 + "string")
+// 3 │ rule () -> Result(val: 12 + "string")
 //   │                        -- ^ -------- this expression has type `string`
 //   │                        │  │  
 //   │                        │  this infix operator is incompatible with types `int` and `string`

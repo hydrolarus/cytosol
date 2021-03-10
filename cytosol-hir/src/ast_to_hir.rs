@@ -49,6 +49,13 @@ pub enum Error {
     #[error("Type {} can't be used as an execution factor", .name.1)]
     InvalidFactorType { name: Identifier },
 
+    #[error("Binding number of 0 is not supported, use `when [{}] = 0` instead", .type_name.1)]
+    ZeroBind {
+        item: FC,
+        bind_number: FC,
+        type_name: Identifier,
+    },
+
     #[error("Type mismatch")]
     TypeMismatch {
         fc: FC,
@@ -140,6 +147,12 @@ pub enum Error {
         ext_name: Identifier,
         parameter: Identifier,
     },
+
+    #[error("Concentration of non-record type `{}`", .type_name.1)]
+    ConcentrationOfNonRecordType { fc: FC, type_name: Identifier },
+
+    #[error("When clause must be of type bool")]
+    WhenClauseMustBeOfTypeBool { expr: ExpressionId, type_id: TypeId },
 }
 
 pub fn files_to_hir(prog: &mut Program, files: &[ast::File]) -> Result<(), Vec<Error>> {
@@ -304,15 +317,20 @@ impl Translator<'_> {
     fn setup_rules(&mut self, files: &[ast::File]) {
         // after they have all been added their binds are filled
         for file in files {
-            for rule in &file.rules {
+            'rules: for rule in &file.rules {
                 let mut binds = vec![];
                 let mut bound_vars = VariableMap::new();
 
                 for reactant in &rule.reactants {
                     let bind_attr = match &reactant.attr {
-                        Some(ast::BindingAttribute::Quantity(_, n)) => {
+                        Some(ast::BindingAttribute::Quantity(fc, n)) => {
                             if *n == 0 {
-                                Bind::None
+                                self.errors.push(Error::ZeroBind {
+                                    bind_number: *fc,
+                                    item: rule.fc,
+                                    type_name: reactant.name.clone(),
+                                });
+                                continue 'rules;
                             } else {
                                 Bind::Quantity(*n)
                             }
@@ -350,13 +368,47 @@ impl Translator<'_> {
                     }
                 }
 
+                let when = if let Some(expr) = &rule.when {
+                    // bound vars are not available, maybe that should be done?
+                    match self.translate_expr(&VariableMap::new(), expr) {
+                        Some(expr) => {
+                            let ty_id = self
+                                .prog
+                                .expr_type(expr)
+                                .expect("after translate_expr() a type should be assigned to expr");
+
+                            if ty_id != self.prog.type_bool_id {
+                                self.errors.push(Error::WhenClauseMustBeOfTypeBool {
+                                    expr,
+                                    type_id: ty_id,
+                                });
+                                continue;
+                            }
+                            Some(expr)
+                        }
+                        None => {
+                            // check next next gene
+                            continue;
+                        }
+                    }
+                } else {
+                    None
+                };
+
                 let products = rule
                     .products
                     .iter()
                     .flat_map(|p| self.translate_product(&bound_vars, p))
                     .collect();
 
-                let _ = self.prog.add_rule(rule.fc, Rule { binds, products });
+                let _ = self.prog.add_rule(
+                    rule.fc,
+                    Rule {
+                        binds,
+                        products,
+                        when,
+                    },
+                );
             }
         }
     }
@@ -416,15 +468,20 @@ impl Translator<'_> {
 
     fn setup_genes(&mut self, files: &[ast::File]) {
         for file in files {
-            for gene in &file.genes {
+            'genes: for gene in &file.genes {
                 let mut binds = vec![];
                 let mut bound_vars = VariableMap::new();
 
                 for factor in &gene.factors {
                     let bind_attr = match &factor.attr {
-                        Some(ast::BindingAttribute::Quantity(_, n)) => {
+                        Some(ast::BindingAttribute::Quantity(fc, n)) => {
                             if *n == 0 {
-                                Bind::None
+                                self.errors.push(Error::ZeroBind {
+                                    bind_number: *fc,
+                                    item: gene.fc,
+                                    type_name: factor.name.clone(),
+                                });
+                                continue 'genes;
                             } else {
                                 Bind::Quantity(*n)
                             }
@@ -462,13 +519,40 @@ impl Translator<'_> {
                     }
                 }
 
+                let when = if let Some(expr) = &gene.when {
+                    // bound vars are not moved, so they can be accessed without problems
+                    match self.translate_expr(&bound_vars, expr) {
+                        Some(expr) => {
+                            let ty_id = self
+                                .prog
+                                .expr_type(expr)
+                                .expect("after translate_expr() a type should be assigned to expr");
+
+                            if ty_id != self.prog.type_bool_id {
+                                self.errors.push(Error::WhenClauseMustBeOfTypeBool {
+                                    expr,
+                                    type_id: ty_id,
+                                });
+                                continue;
+                            }
+                            Some(expr)
+                        }
+                        None => {
+                            // check next next gene
+                            continue;
+                        }
+                    }
+                } else {
+                    None
+                };
+
                 let body = gene
                     .body
                     .iter()
                     .filter_map(|s| self.translate_gene_statement(&bound_vars, s))
                     .collect();
 
-                let hir_gene = Gene { binds, body };
+                let hir_gene = Gene { binds, body, when };
 
                 self.prog.add_gene(gene.fc(), hir_gene);
             }
@@ -486,7 +570,7 @@ impl Translator<'_> {
         };
         let ty = self.prog.typ(type_id).unwrap();
         match ty {
-            Type::Int | Type::String => {
+            Type::Bool | Type::Int | Type::String => {
                 self.add_error(Error::UsingBuiltinTypeAsProduct {
                     product_name: product.name.clone(),
                 });
@@ -675,6 +759,11 @@ impl Translator<'_> {
     ) -> Option<ExpressionId> {
         let fc = expr.fc();
         let (expr, ty) = match expr {
+            ast::Expression::Literal(ast::Literal::Bool(_, b)) => {
+                let expr = Expression::BoolLiteral(*b);
+                let ty = self.prog.type_bool_id;
+                (expr, ty)
+            }
             ast::Expression::Literal(ast::Literal::Integer(_, n)) => {
                 let expr = Expression::IntegerLiteral(*n);
                 let ty = self.prog.type_int_id;
@@ -775,23 +864,44 @@ impl Translator<'_> {
                 let lhs_type = self.prog.expr_type(lhs_id)?;
                 let rhs_type = self.prog.expr_type(rhs_id)?;
 
+                macro_rules! prim_type {
+                    (bool) => {
+                        self.prog.type_bool_id
+                    };
+                    (int) => {
+                        self.prog.type_int_id
+                    };
+                    (string) => {
+                        self.prog.type_string_id
+                    };
+                };
+                macro_rules! binop {
+                    ($a:ident, $b:ident => $c:ident) => {
+                        ((prim_type!($a), prim_type!($b)), prim_type!($c))
+                    };
+                };
+
                 let operator_types = match op {
                     InfixOperator::Add => {
-                        vec![
-                            (
-                                (self.prog.type_int_id, self.prog.type_int_id),
-                                self.prog.type_int_id,
-                            ),
-                            (
-                                (self.prog.type_string_id, self.prog.type_string_id),
-                                self.prog.type_string_id,
-                            ),
-                        ]
+                        vec![binop!(int, int => int), binop!(string, string => string)]
                     }
-                    InfixOperator::Sub => vec![(
-                        (self.prog.type_int_id, self.prog.type_int_id),
-                        self.prog.type_int_id,
-                    )],
+                    InfixOperator::Sub => vec![binop!(int, int => int)],
+                    InfixOperator::Mul => vec![binop!(int, int => int)],
+                    InfixOperator::Div => vec![binop!(int, int => int)],
+                    InfixOperator::Eq => vec![
+                        binop!(bool, bool => bool),
+                        binop!(int, int => bool),
+                        binop!(string, string => bool),
+                    ],
+                    InfixOperator::Neq => vec![
+                        binop!(bool, bool => bool),
+                        binop!(int, int => bool),
+                        binop!(string, string => bool),
+                    ],
+                    InfixOperator::Lt => vec![binop!(int, int => bool)],
+                    InfixOperator::Lte => vec![binop!(int, int => bool)],
+                    InfixOperator::Gt => vec![binop!(int, int => bool)],
+                    InfixOperator::Gte => vec![binop!(int, int => bool)],
                 };
 
                 if let Some((_, res_ty)) = operator_types
@@ -814,6 +924,23 @@ impl Translator<'_> {
                     });
                     return None;
                 }
+            }
+            ast::Expression::Concentration(ty_name) => {
+                let ty_id = self.prog.type_by_name(&ty_name.1)?;
+
+                let ty = &self.prog[ty_id];
+                let record_id = match ty {
+                    Type::Record(id) => *id,
+                    _ => {
+                        self.errors.push(Error::ConcentrationOfNonRecordType {
+                            fc,
+                            type_name: ty_name.clone(),
+                        });
+                        return None;
+                    }
+                };
+
+                (Expression::Concentration(record_id), self.prog.type_int_id)
             }
         };
         Some(self.prog.add_expression(fc, expr, ty))

@@ -3,7 +3,8 @@ extern print_line(s: string)
 record Start
 record StartInhibitor
 
-gene [Start, 0 StartInhibitor]
+gene (Start)
+    when [StartInhibitor] = 0
 {
     express StartInhibitor
     call print_line(s: "hello, world.")
@@ -16,7 +17,8 @@ gene [Start, 0 StartInhibitor]
 //     ((record Start ()) (record StartInhibitor ()))
 //     (
 //         (gene
-//             ((record Start) (record 0 StartInhibitor))
+//             ((record Start))
+//             (when (= (concentration StartInhibitor) 0))
 //             (
 //                 (express (product StartInhibitor))
 //                 (call print_line ((s "hello, world."))))))

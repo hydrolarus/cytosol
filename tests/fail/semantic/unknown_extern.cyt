@@ -1,4 +1,4 @@
-gene []
+gene ()
 {
     call huh(x: 12)
 }

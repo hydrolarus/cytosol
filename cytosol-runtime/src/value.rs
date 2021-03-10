@@ -2,6 +2,7 @@ pub type RecordFields = Vec<Value>;
 
 #[derive(Debug, Clone)]
 pub enum Value {
+    Bool(bool),
     Integer(isize),
     String(String),
     Record(RecordFields),

@@ -1,6 +1,6 @@
 record Test(value: int)
 
-rule [] -> Test(value: "hello")
+rule () -> Test(value: "hello")
 
 // args: --no-colour
 
@@ -8,5 +8,5 @@ rule [] -> Test(value: "hello")
 // error: expected expression of type `int` but found `string`
 //   ┌─ ../tests/fail/semantic/product_field_type_mismatch.cyt:3:24
 //   │
-// 3 │ rule [] -> Test(value: "hello")
+// 3 │ rule () -> Test(value: "hello")
 //   │                        ^^^^^^^ this has type `string` but should be of type `int`

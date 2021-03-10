@@ -179,6 +179,7 @@ pub extern "C" fn cyt_driver_runner_run(
 
 #[repr(C)]
 pub enum ValueType {
+    Bool,
     Integer,
     String,
     Record,
@@ -194,6 +195,13 @@ pub extern "C" fn cyt_value_buffer_new(size: usize) -> Box<ValueBuffer> {
 #[no_mangle]
 pub extern "C" fn cyt_value_buffer_get_size(buf: &ValueBuffer) -> usize {
     buf.0.len()
+}
+
+#[no_mangle]
+pub extern "C" fn cyt_value_buffer_set_bool(buf: &mut ValueBuffer, idx: usize, b: bool) {
+    if let Some(val) = buf.0.get_mut(idx) {
+        *val = Value::Bool(b);
+    }
 }
 
 #[no_mangle]
@@ -241,10 +249,29 @@ pub extern "C" fn cyt_value_buffer_destroy(buf: Box<ValueBuffer>) {
 #[no_mangle]
 pub extern "C" fn cyt_value_get_type(buf: &ValueBuffer, idx: usize) -> ValueType {
     match buf.0.get(idx) {
+        Some(Value::Bool(_)) => ValueType::Bool,
         Some(Value::Integer(_)) => ValueType::Integer,
         Some(Value::String(_)) => ValueType::String,
         Some(Value::Record(_)) => ValueType::Record,
         None => ValueType::Integer,
+    }
+}
+
+/// Get the boolean value in `buf` at `idx` by writing it in `out_b`.
+///
+/// If the value is not a boolean then `false` is returned, `true` otherwise.
+#[no_mangle]
+pub extern "C" fn cyt_value_buffer_get_bool(
+    buf: &ValueBuffer,
+    idx: usize,
+    out_b: &mut bool,
+) -> bool {
+    match buf.0.get(idx) {
+        Some(Value::Bool(b)) => {
+            *out_b = *b;
+            true
+        }
+        _ => false,
     }
 }
 
@@ -343,6 +370,8 @@ pub extern "C" fn cyt_cellenv_add_record(
 
 #[no_mangle]
 pub extern "C" fn cyt_cellenv_count_records(cell_env: &CellEnv, record_id: RecordId) -> usize {
+    use cytosol::runtime::RecordContainer;
+
     let id = record_id.to_id();
     cell_env.0.count_records(id)
 }

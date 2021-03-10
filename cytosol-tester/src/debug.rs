@@ -123,11 +123,21 @@ impl ToDoc for Type {
 }
 impl ToDoc for Gene {
     fn to_doc(&self) -> Doc {
+        let when = if let Some(expr) = &self.when {
+            Doc::text("(when ")
+                .append(expr.to_doc())
+                .append(")")
+                .append(Doc::hardline())
+                .group()
+        } else {
+            Doc::nil()
+        };
         Doc::text("(gene")
             .append(
                 Doc::hardline()
                     .append(self.factors.to_doc())
                     .append(Doc::hardline())
+                    .append(when)
                     .append(self.body.to_doc())
                     .nest(4)
                     .group(),
@@ -139,12 +149,22 @@ impl ToDoc for Gene {
 
 impl ToDoc for Rule {
     fn to_doc(&self) -> Doc {
+        let when = if let Some(expr) = &self.when {
+            Doc::hardline()
+                .append("(when ")
+                .append(expr.to_doc())
+                .append(")")
+                .group()
+        } else {
+            Doc::nil()
+        };
         Doc::text("(rule")
             .append(
                 Doc::line()
                     .append(self.reactants.to_doc())
                     .append(Doc::line())
                     .append(self.products.to_doc())
+                    .append(when)
                     .nest(4)
                     .group(),
             )
@@ -226,12 +246,17 @@ impl ToDoc for Expression {
                 .append(args[1].to_doc())
                 .append(")")
                 .group(),
+            Expression::Concentration(c) => Doc::text("(concentration")
+                .append(Doc::line())
+                .append(c.to_doc())
+                .append(")"),
         }
     }
 }
 impl ToDoc for Literal {
     fn to_doc(&self) -> Doc {
         match self {
+            Literal::Bool(_, b) => Doc::as_string(b),
             Literal::Integer(_, i) => Doc::as_string(i),
             Literal::String(_, s) => Doc::text(format!("{:?}", s)),
         }
@@ -249,6 +274,14 @@ impl ToDoc for InfixOperator {
         match self {
             InfixOperator::Add => Doc::text("+"),
             InfixOperator::Sub => Doc::text("-"),
+            InfixOperator::Mul => Doc::text("*"),
+            InfixOperator::Div => Doc::text("/"),
+            InfixOperator::Eq => Doc::text("="),
+            InfixOperator::Neq => Doc::text("≠"),
+            InfixOperator::Lt => Doc::text("<"),
+            InfixOperator::Lte => Doc::text("≤"),
+            InfixOperator::Gt => Doc::text(">"),
+            InfixOperator::Gte => Doc::text("≥"),
         }
     }
 }

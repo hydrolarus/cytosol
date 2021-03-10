@@ -1,6 +1,6 @@
 record Result(x: string)
 
-rule [] -> Result(x: -"test")
+rule () -> Result(x: -"test")
 
 // args: --no-colour
 
@@ -8,7 +8,7 @@ rule [] -> Result(x: -"test")
 // error: cannot apply unary operator `-` to type `string`
 //   ┌─ ../tests/fail/semantic/product_type_mismatch_prefix_op_literal.cyt:3:22
 //   │
-// 3 │ rule [] -> Result(x: -"test")
+// 3 │ rule () -> Result(x: -"test")
 //   │                      ^------ this expression has type `string`
 //   │                      │ 
 //   │                      this unary operator is incompatible with type `string`

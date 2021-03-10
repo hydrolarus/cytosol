@@ -64,12 +64,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    if args.no_run {
-        return Ok(());
-    }
-
-    execute(&prog, &mut runner);
-
     if args.perf_report {
         runner
             .driver()
@@ -83,6 +77,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .perf
             .print_per_file_perf_report(&mut std::io::stdout())?;
     }
+
+    if args.no_run {
+        return Ok(());
+    }
+
+    execute(&prog, &mut runner);
 
     Ok(())
 }

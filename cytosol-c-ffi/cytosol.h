@@ -13,6 +13,7 @@ typedef enum cyt_run_result {
 } cyt_run_result;
 
 typedef enum cyt_value_type {
+        CYT_VALUE_TYPE_BOOL,
         CYT_VALUE_TYPE_INTEGER,
         CYT_VALUE_TYPE_STRING,
         CYT_VALUE_TYPE_RECORD,
@@ -108,6 +109,10 @@ struct cyt_value_buffer *cyt_value_buffer_new(size_t size);
 
 size_t cyt_value_buffer_get_size(const struct cyt_value_buffer *buf);
 
+void cyt_value_buffer_set_bool(struct cyt_value_buffer *buf,
+                               size_t idx,
+                               bool b);
+
 void cyt_value_buffer_set_int(struct cyt_value_buffer *buf,
                               size_t idx,
                               ptrdiff_t i);
@@ -137,6 +142,15 @@ void cyt_value_buffer_destroy(struct cyt_value_buffer *buf);
  */
 enum cyt_value_type cyt_value_get_type(const struct cyt_value_buffer *buf,
                                        size_t idx);
+
+/**
+ * Get the boolean value in `buf` at `idx` by writing it in `out_b`.
+ *
+ * If the value is not a boolean then `false` is returned, `true` otherwise.
+ */
+bool cyt_value_buffer_get_bool(const struct cyt_value_buffer *buf,
+                               size_t idx,
+                               bool *out_b);
 
 /**
  * Get the integer value in `buf` at `idx` by writing it in `out_i`.

@@ -5,7 +5,7 @@ record Person(name: string, age: int)
 
 record Thing
 
-gene [p: Person]
+gene (p: Person)
 {
     call display_person(person: p)
     call display_string(s: p.name)

@@ -31,6 +31,7 @@ pub struct Program {
     pub exprs_fc: HashMap<ExpressionId, FC>,
     pub exprs_type: HashMap<ExpressionId, TypeId>,
 
+    pub type_bool_id: TypeId,
     pub type_int_id: TypeId,
     pub type_string_id: TypeId,
 }
@@ -44,10 +45,12 @@ impl Default for Program {
 impl Program {
     pub fn new() -> Self {
         let mut types = Arena::new();
+        let type_bool_id = types.alloc(Type::Bool);
         let type_int_id = types.alloc(Type::Int);
         let type_string_id = types.alloc(Type::String);
 
         let mut types_by_name = HashMap::new();
+        let _ = types_by_name.insert("bool".to_string(), type_bool_id);
         let _ = types_by_name.insert("int".to_string(), type_int_id);
         let _ = types_by_name.insert("string".to_string(), type_string_id);
 
@@ -70,6 +73,7 @@ impl Program {
             exprs_fc: Default::default(),
             exprs_type: Default::default(),
 
+            type_bool_id,
             type_int_id,
             type_string_id,
         }
@@ -90,6 +94,7 @@ impl Program {
                     }
                 }
             }
+            Type::Bool => unreachable!("Should ever add `bool` as a type"),
             Type::Int => unreachable!("Shouldn't ever add `int` as a type"),
             Type::String => unreachable!("Shouldn't ever add `string` as a type"),
         }
@@ -98,6 +103,7 @@ impl Program {
     pub fn type_ident(&self, type_id: TypeId) -> Option<&Identifier> {
         let ty = self.types.get(type_id)?;
         match ty {
+            Type::Bool => None,
             Type::Int => None,
             Type::String => None,
             Type::Record(id) => self.record(*id).map(|a| &a.name),
@@ -108,6 +114,7 @@ impl Program {
         let ty = self.types.get(type_id)?;
 
         match ty {
+            Type::Bool => Some(("bool".to_string(), None)),
             Type::Int => Some(("int".to_string(), None)),
             Type::String => Some(("string".to_string(), None)),
             _ => {

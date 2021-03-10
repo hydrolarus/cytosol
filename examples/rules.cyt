@@ -5,7 +5,7 @@ record StartInhibitor
 
 record A
 
-gene [Start, 0 StartInhibitor]
+gene (Start, 0 StartInhibitor)
 {
     call print_line(msg: "Start")
     express StartInhibitor
@@ -13,7 +13,7 @@ gene [Start, 0 StartInhibitor]
     express A
 }
 
-gene [A]
+gene (A)
 {
     call print_line(msg: "An `A` record was expressed")
     express RemoveA
@@ -22,5 +22,5 @@ gene [A]
 record RemoveStart
 record RemoveA
 
-rule [RemoveStart, Start, StartInhibitor] -> RemoveStart
-rule [RemoveA, A] -> RemoveA
+rule (RemoveStart, Start, StartInhibitor) -> RemoveStart
+rule (RemoveA, A) -> RemoveA

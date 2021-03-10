@@ -1,11 +1,11 @@
-rule [A, B] -> C
+rule (A, B) -> C
 
-rule [C] -> nothing
-rule [C] -> Ø
+rule (C) -> nothing
+rule (C) -> Ø
 
-rule [1 A, 2 C] -> 10 D
+rule (1 A, 2 C) -> 10 D
 
-rule [a: A, 0 B, c: C] -> nothing
+rule (a: A, 0 B, c: C) -> nothing
 
 // args: --dump-ast --no-semantic-analysis
 
