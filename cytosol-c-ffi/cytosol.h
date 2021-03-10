@@ -157,9 +157,9 @@ bool cyt_value_buffer_get_bool(const struct cyt_value_buffer *buf,
  *
  * If the value is not an integer then `false` is returned, `true` otherwise.
  */
-bool cyt_value_buffer_get_integer(const struct cyt_value_buffer *buf,
-                                  size_t idx,
-                                  ptrdiff_t *out_i);
+bool cyt_value_buffer_get_int(const struct cyt_value_buffer *buf,
+                              size_t idx,
+                              ptrdiff_t *out_i);
 
 /**
  * Get the string value in `buf` at `idx` by writing a pointer to `out_ptr`

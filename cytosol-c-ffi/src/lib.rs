@@ -279,7 +279,7 @@ pub extern "C" fn cyt_value_buffer_get_bool(
 ///
 /// If the value is not an integer then `false` is returned, `true` otherwise.
 #[no_mangle]
-pub extern "C" fn cyt_value_buffer_get_integer(
+pub extern "C" fn cyt_value_buffer_get_int(
     buf: &ValueBuffer,
     idx: usize,
     out_i: &mut isize,
