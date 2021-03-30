@@ -23,7 +23,7 @@ jobs:
       run: |
         cp cytosol-c-ffi/cytosol.h .
         cp target/release/libcytosol_c_ffi.a .
-        7z cytosol-cffi.zip cytosol.h libcytosol_c_ffi.a
+        7z a cytosol-cffi.zip cytosol.h libcytosol_c_ffi.a
 
     - name: Deploy release
       uses: WebFreak001/deploy-nightly@v1.1.0
