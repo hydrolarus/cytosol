@@ -3,7 +3,7 @@ name: Cffi Nightly
 on:
   push:
     branches: 
-    - 'master'
+    - 'main'
 
 jobs:
   nightly:
