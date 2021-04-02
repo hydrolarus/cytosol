@@ -31,7 +31,7 @@ jobs:
       if: ${{ matrix.os == 'windows-latest' }}
       run: |
         cp cytosol-c-ffi/cytosol.h .
-        cp target/release/cytosol_c.lib
+        cp target/release/cytosol_c.lib .
         7z a cytosol-cffi.zip cytosol.h libcytosol_c_ffi.a
         #target/release/cytosol_c.dll
 
