@@ -20,20 +20,11 @@ jobs:
       run: cargo build --release -p cytosol-c-ffi
 
     - name: build asset
-      if: ${{ matrix.os != 'windows-latest' }}
       run: |
         cp cytosol-c-ffi/cytosol.h .
-        cp target/release/libcytosol_c_ffi.a .
-        7z a cytosol-cffi.zip cytosol.h libcytosol_c_ffi.a
+        cp target/release/libcytosol_c_ffi.* .
+        7z a cytosol-cffi.zip cytosol.h libcytosol_c_ffi.*
         #target/release/libcytosol_c_ffi.so
-
-    - name: build asset
-      if: ${{ matrix.os == 'windows-latest' }}
-      run: |
-        cp cytosol-c-ffi/cytosol.h .
-        cp target/release/cytosol_c.lib .
-        7z a cytosol-cffi.zip cytosol.h libcytosol_c_ffi.a
-        #target/release/cytosol_c.dll
 
     - name: Deploy release
       uses: WebFreak001/deploy-nightly@v1.1.0
