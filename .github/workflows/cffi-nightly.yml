@@ -11,8 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-#        os: [ubuntu-latest, windows-latest, macOS-latest]
-        os: [ubuntu-latest, macOS-latest]
+        os: [ubuntu-latest, windows-latest, macOS-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -21,18 +20,28 @@ jobs:
       run: cargo build --release -p cytosol-c-ffi
 
     - name: build asset
+      if: ${{ matrix.os != 'windows-latest' }}
       run: |
         cp cytosol-c-ffi/cytosol.h .
         cp target/release/libcytosol_c_ffi.a .
         7z a cytosol-cffi.zip cytosol.h libcytosol_c_ffi.a
+        #target/release/libcytosol_c_ffi.so
+
+    - name: build asset
+      if: ${{ matrix.os == 'windows-latest' }}
+      run: |
+        cp cytosol-c-ffi/cytosol.h .
+        cp target/release/cytosol_c.lib
+        7z a cytosol-cffi.zip cytosol.h libcytosol_c_ffi.a
+        #target/release/cytosol_c.dll
 
     - name: Deploy release
       uses: WebFreak001/deploy-nightly@v1.1.0
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: https://uploads.github.com/repos/fennecdjay/cytosol/releases/39604855/assets/cytosol-cffi_${{matrix.os}}-nightly-$$.zip # find out this value by opening https://api.github.com/repos/<owner>/<repo>/releases in your browser and copy the full "upload_url" value including the {?name,label} part
-        release_id: 39604855 # same as above (id can just be taken out the upload_url, it's used to find old releases)
+        upload_url: https://uploads.github.com/repos/fennecdjay/cytosol/releases/40887187/assets{?name,label} #find out this value by opening https://api.github.com/repos/<owner>/<repo>/releases in your browser and copy the full "upload_url" value including the {?name,label} part
+        release_id: 40887187 # same as above (id can just be taken out the upload_url, it's used to find old releases)
         asset_path: ./cytosol-cffi.zip # path to archive to upload
         asset_name: cytosol-cffi_${{matrix.os}}-nightly-$$.zip # name to upload the release as, use $$ to insert date (YYYYMMDD) and 6 letter commit hash
         asset_content_type: application/zip # required by GitHub API
