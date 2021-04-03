@@ -1,0 +1,38 @@
+name: C-ffi Nightly
+
+on:
+  push:
+    branches: 
+    - 'main'
+
+jobs:
+  nightly:
+    name: Deploy nightly
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build
+      run: cargo build --release -p cytosol-c-ffi
+
+    - name: build asset
+      run: |
+        cp cytosol-c-ffi/cytosol.h .
+        cp target/release/libcytosol_c_ffi.* .
+        7z a cytosol-c-ffi.zip cytosol.h libcytosol_c_ffi.*
+
+    - name: Deploy release
+      uses: WebFreak001/deploy-nightly@v1.1.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: https://uploads.github.com/repos/tiatomee/cytosol/releases/40890251/assets{?name,label} #find out this value by opening https://api.github.com/repos/<owner>/<repo>/releases in your browser and copy the full "upload_url" value including the {?name,label} part
+        release_id: 40890251 # same as above (id can just be taken out the upload_url, it's used to find old releases)
+        asset_path: ./cytosol-c-ffi.zip # path to archive to upload
+        asset_name: cytosol-c-ffi_${{matrix.os}}-nightly-$$.zip # name to upload the release as, use $$ to insert date (YYYYMMDD) and 6 letter commit hash
+        asset_content_type: application/zip # required by GitHub API
+        max_releases: 1 # optional, if there are more releases than this matching the asset_name, the oldest ones are going to be deleted
