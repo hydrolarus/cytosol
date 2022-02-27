@@ -3,3 +3,4 @@ Cargo.lock
 
 examples/c-api/*.o
 examples/c-api/c-api
+.vscode

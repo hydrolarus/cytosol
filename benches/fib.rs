@@ -8,7 +8,7 @@ use cytosol::{
 const SOURCE: &str = r#"
 record Fib(a: int, b: int)
 
-rule [f: Fib] -> Fib(a: f.b, b: f.a + f.b)
+rule (f: Fib) -> Fib(a: f.b, b: f.a + f.b)
 "#;
 
 fn fibonacci_factory() -> impl FnMut(usize) -> usize {
