@@ -874,12 +874,12 @@ impl Translator<'_> {
                     (string) => {
                         self.prog.type_string_id
                     };
-                };
+                }
                 macro_rules! binop {
                     ($a:ident, $b:ident => $c:ident) => {
                         ((prim_type!($a), prim_type!($b)), prim_type!($c))
                     };
-                };
+                }
 
                 let operator_types = match op {
                     InfixOperator::Add => {

@@ -105,9 +105,9 @@ pub enum TokenKind<'src> {
 
     #[error]
     // skip whitespace
-    #[regex(r"[ \t\n\f]+", logos::skip)]
+    #[regex(r"[ \t\r\n\f]+", logos::skip)]
     // skip comments
-    #[regex(r"//[^\n]*", logos::skip)]
+    #[regex(r"(//[^\n]*)|(//[^(\r\n)]*)", logos::skip)]
     Error,
 }
 

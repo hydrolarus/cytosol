@@ -3,7 +3,8 @@ extern print_line(msg: string)
 record Start
 record StartInhibitor
 
-gene (Start, 0 StartInhibitor)
+gene (Start)
+    when [StartInhibitor] = 0
 {
     express StartInhibitor
     express A
@@ -12,7 +13,8 @@ gene (Start, 0 StartInhibitor)
 record A
 record InhibitA
 
-gene (A, 0 InhibitA)
+gene (A)
+    when [InhibitA] = 0
 {
     call print_line(msg: "A")
     express InhibitA
@@ -22,7 +24,8 @@ gene (A, 0 InhibitA)
 record B
 record InhibitB
 
-gene (B, 0 InhibitB)
+gene (B)
+    when [InhibitB] = 0
 {
     call print_line(msg: "B")
     express InhibitB
@@ -32,7 +35,8 @@ gene (B, 0 InhibitB)
 record C
 record InhibitC
 
-gene (C, 0 InhibitC)
+gene (C)
+    when [InhibitC] = 0
 {
     call print_line(msg: "C")
     express InhibitC

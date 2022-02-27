@@ -6,7 +6,7 @@ use cytosol::{
     runtime::CellEnv,
 };
 
-use clap::Clap;
+use clap::Parser;
 use driver::TestDriver;
 
 mod debug;
@@ -18,8 +18,8 @@ use stats_alloc::{StatsAlloc, INSTRUMENTED_SYSTEM};
 #[global_allocator]
 pub(crate) static STATS_ALLOC: &StatsAlloc<std::alloc::System> = &INSTRUMENTED_SYSTEM;
 
-#[derive(Debug, Clap)]
-#[clap(version = "0.1", author = "Tia")]
+#[derive(Parser, Debug)]
+#[clap(version = "0.1")]
 struct Arguments {
     #[clap(long)]
     dump_tokens: bool,

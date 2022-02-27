@@ -5,7 +5,8 @@ record StartInhibitor
 
 record A
 
-gene (Start, 0 StartInhibitor)
+gene (Start)
+    when [StartInhibitor] = 0
 {
     call print_line(msg: "Start")
     express StartInhibitor

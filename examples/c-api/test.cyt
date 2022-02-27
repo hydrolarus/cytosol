@@ -3,7 +3,8 @@ extern print_string(s: string)
 record Start
 record StartInhibitor
 
-gene [Start, 0 StartInhibitor]
+gene (Start)
+    when [StartInhibitor] = 0
 {
     express StartInhibitor
 
